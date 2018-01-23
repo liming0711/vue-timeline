@@ -1,6 +1,6 @@
 # vue-timeline-basic
 
-> 基础班时间轴
+> 基础版时间轴
 
 ## Build Setup
 

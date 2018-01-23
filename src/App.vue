@@ -1,43 +1,38 @@
 <template>
   <div id="app">
-    <div class="timeline-wrapper">
-      <timeline :now="now" :range="range" :space="space"></timeline>
-    </div>
+    <button @click="pause = !pause"> 播放 ：{{ !pause }} </button>
+    <timeline class="timeline-wrapper" :now="now" :range="range" :space="space" :pause.sync="pause" :theme="'dark'"></timeline>
   </div>
 </template>
 
 <script>
-import timeline from './components/timeline/timeline';
+  import timeline from './components/timeline/timeline';
 
-export default {
-  name: 'app',
-  components: {
-    timeline
-  },
-  data () {
-    return {
-      now: new Date().getTime(),
-      range: [0, 48],
-      space: {
-        60: [0, 12],
-        180: [12, 24],
-        360: [24, 48]
-      }
-    };
-  }
-};
+  export default {
+    name: 'app',
+    components: {
+      timeline
+    },
+    data () {
+      return {
+        now: new Date().getTime(),
+        range: [0, 12],
+        space: 10,
+        pause: true
+      };
+    }
+  };
 </script>
 
-<style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-.timeline-wrapper {
-  position: fixed;
-  bottom: 0;
-  left: 100px;
-  right: 100px;
-}
+<style lang="stylus">
+  #app
+    font-family: 'Avenir', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+  .timeline-wrapper
+    position: absolute;
+    bottom: 0;
+    left: 100px;
+    right: 100px;
 </style>
