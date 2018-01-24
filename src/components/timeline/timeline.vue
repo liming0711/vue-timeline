@@ -21,67 +21,71 @@
           <div v-show="!collapse" class="tl-control-btn tl-last" :key="'tl-last'"><i class="tl-icon-last"></i></div>
         </transition-group>
       </div>
-      <div class="tl-datetime" ref="container">
-        <!-- <div
-          class="tl-datetime-disable tl-datetime-disable_first"
-          :style="{ width: disableFirstWidth + 'px' }">
-        </div> -->
-        <!-- <div
-          class="tl-datetime-placeholder tl-datetime-placeholder_first"
-          :style="{ left: (disableFirstWidth - 5) + 'px' }">
-        </div> -->
-        <transition
-          name="width-minus2"
-          :css="false"
-          @before-enter="beforeEnterTime"
-          @enter="enterTime"
-          @leave="leaveTime">
-          <ul v-show="!collapse" class="tl-datetime-list">
-            <li
-              v-for="(item, index) in time.timeList"
-              :key="item"
-              class="tl-datetime-item"
-              :class="{
-                'tl-datetime-item-now': item === time.now,
-                'tl-datetime-item-current': index === current
-              }"
-              :style="{ width: itemWidth + 'px' }"
-              :data-datetime="time.timeStrList[index]"
-              @click="onClickItem(item, index)">
-              <!-- 显示的小时 -->
-              <span
-                v-if="new Date(item).getHours() !== new Date(time.timeList[index - 1]).getHours()"
-                class="tl-datetime-hour"
-                :data-hour="new Date(item).getHours()"></span>
-              <!-- tl-datetime-hour-last 这个 span 是为了补最后一个小时数字的显示 -->
-              <span
-                v-if="index === time.timeList.length - 1"
-                class="tl-datetime-hour tl-datetime-hour-last"
-                :data-hour="new Date(item).getHours() + 1"></span>
-              <!-- 显示的日期 -->
-              <span
-                v-if="new Date(item).getDate() !== new Date(time.timeList[index - 1]).getDate()"
-                class="tl-datetime-date"
-                :data-date="time.timeStrList[index].substring(5, 10)"></span>
-            </li>
-          </ul>
-        </transition>
-        <timeline-button
-          v-model="firstValue"
-          ref="buttonFirst">
-        </timeline-button>
-        <timeline-button
-          v-model="lastValue"
-          ref="buttonLast">
-        </timeline-button>
-        <!-- <div
-          class="tl-datetime-placeholder tl-datetime-placeholder_last"
-          :style="{ right: (disableLastWidth - 5) + 'px' }">
-        </div> -->
-        <!-- <div
-          class="tl-datetime-disable tl-datetime-disable_last"
-          :style="{ width: disableLastWidth + 'px' }">
-        </div> -->
+      <div class="tl-datetime-container" ref="container">
+        <div class="tl-datetime">
+          <!-- <div
+            class="tl-datetime-disable tl-datetime-disable_first"
+            :style="{ width: disableFirstWidth + 'px' }">
+          </div> -->
+          <!-- <div
+            class="tl-datetime-placeholder tl-datetime-placeholder_first"
+            :style="{ left: (disableFirstWidth - 5) + 'px' }">
+          </div> -->
+          <transition
+            name="width-minus2"
+            :css="false"
+            @before-enter="beforeEnterTime"
+            @enter="enterTime"
+            @leave="leaveTime">
+            <ul v-show="!collapse" class="tl-datetime-list">
+              <li
+                v-for="(item, index) in time.timeList"
+                :key="item"
+                class="tl-datetime-item"
+                :class="{
+                  'tl-datetime-item-now': item === time.now,
+                  'tl-datetime-item-current': index === current
+                }"
+                :style="{ width: itemWidth + 'px' }"
+                :data-datetime="time.timeStrList[index]"
+                @click="onClickItem(item, index)">
+                <!-- 显示的小时 -->
+                <span
+                  v-if="new Date(item).getHours() !== new Date(time.timeList[index - 1]).getHours()"
+                  class="tl-datetime-hour"
+                  :data-hour="new Date(item).getHours()"></span>
+                <!-- tl-datetime-hour-last 这个 span 是为了补最后一个小时数字的显示 -->
+                <span
+                  v-if="index === time.timeList.length - 1"
+                  class="tl-datetime-hour tl-datetime-hour-last"
+                  :data-hour="new Date(item).getHours() + 1"></span>
+                <!-- 显示的日期 -->
+                <span
+                  v-if="new Date(item).getDate() !== new Date(time.timeList[index - 1]).getDate()"
+                  class="tl-datetime-date"
+                  :data-date="time.timeStrList[index].substring(5, 10)"></span>
+              </li>
+            </ul>
+          </transition>
+          <timeline-button
+            v-model="firstValue"
+            :place="'first'"
+            ref="buttonFirst">
+          </timeline-button>
+          <timeline-button
+            v-model="lastValue"
+            :place="'last'"
+            ref="buttonLast">
+          </timeline-button>
+          <!-- <div
+            class="tl-datetime-placeholder tl-datetime-placeholder_last"
+            :style="{ right: (disableLastWidth - 5) + 'px' }">
+          </div> -->
+          <!-- <div
+            class="tl-datetime-disable tl-datetime-disable_last"
+            :style="{ width: disableLastWidth + 'px' }">
+          </div> -->
+        </div>
       </div>
     </div>
     <div class="tl-module tl-menu"><i class="tl-icon-setting"></i></div>
@@ -160,6 +164,10 @@
         default: 'dark'
       },
       showTooltip: {
+        type: Boolean,
+        default: true
+      },
+      showCollapse: {
         type: Boolean,
         default: true
       }
@@ -318,95 +326,96 @@
           width: 32px
           text-align: center
           line-height: $height-all
-      .tl-datetime
-        position: relative
-        padding: 0 10px 37px 10px
-        white-space: nowrap
+      .tl-datetime-container
+        width: 578px
         overflow: hidden
-        width: 900px
-        // .tl-datetime-disable
-        //   position: absolute
-        //   top: 0
-        //   height: 100%
-        //   background-color $color-disable
-        //   z-index: 3
-        //   cursor: not-allowed
-        // .tl-datetime-disable_first
-        //   left: 0
-        // .tl-datetime-disable_last
-        //   right: 0
-        // .tl-datetime-placeholder
-        //   position: absolute
-        //   width: 11px
-        //   height: 100%
-        //   background: url(./images/indicator.png) no-repeat center center
-        //   background-size: 11px 60px
-        //   z-index: 4
-        // .tl-datetime-placeholder_first
-        //   top: 0
-        // .tl-datetime-placeholder_last
-        //   top: 0
-        .tl-datetime-list
-          font-size: 0
-          .tl-datetime-item
-            position: relative
-            display: inline-block
-            height: 22px
-            color: $color-font
-            border-bottom: 1px solid $color-tick
-            cursor: pointer
-            &:hover
-              background-color: $color-current
-            &:before
-              content: ''
-              position: absolute
-              left: 0
-              height: 4px
-              bottom: 0
-              width: 1px
-              background-color: $color-tick
-            .tl-datetime-hour
-              position: absolute
-              bottom: 0
-              left: 0
-              width: 1px
-              height: 8px
-              font-size: 14px
-              background-color: $color-tick
+        .tl-datetime
+          position: relative
+          padding: 0 10px 37px 10px
+          white-space: nowrap
+          // .tl-datetime-disable
+          //   position: absolute
+          //   top: 0
+          //   height: 100%
+          //   background-color $color-disable
+          //   z-index: 3
+          //   cursor: not-allowed
+          // .tl-datetime-disable_first
+          //   left: 0
+          // .tl-datetime-disable_last
+          //   right: 0
+          // .tl-datetime-placeholder
+          //   position: absolute
+          //   width: 11px
+          //   height: 100%
+          //   background: url(./images/indicator.png) no-repeat center center
+          //   background-size: 11px 60px
+          //   z-index: 4
+          // .tl-datetime-placeholder_first
+          //   top: 0
+          // .tl-datetime-placeholder_last
+          //   top: 0
+          .tl-datetime-list
+            font-size: 0
+            .tl-datetime-item
+              position: relative
+              display: inline-block
+              height: 22px
+              color: $color-font
+              border-bottom: 1px solid $color-tick
               cursor: pointer
-              &:after
-                content: attr(data-hour)
+              &:hover
+                background-color: $color-current
+              &:before
+                content: ''
                 position: absolute
-                top: 12px
                 left: 0
-                width: 20px
-                margin-left: -10px
-                text-align: center
-            .tl-datetime-hour-last
-              left: auto
-              right: 0
-            .tl-datetime-date
-              position: absolute
-              top: 44px
-              left: 0
-              color: $color-date
-              font-size: 12px
-              &:after
-                content: attr(data-date)
-                display: inline-block
-                width: 10px
-                margin-left: -5px
-                text-align: center
-          .tl-datetime-item-current
-            background-color: $color-current
-          .tl-datetime-item-now:after
-              content: ''
-              position: absolute;
-              left: 1px
-              bottom: 0;
-              width: 100%
-              height: 4px
-              background-color: $color-now
+                height: 4px
+                bottom: 0
+                width: 1px
+                background-color: $color-tick
+              .tl-datetime-hour
+                position: absolute
+                bottom: 0
+                left: 0
+                width: 1px
+                height: 8px
+                font-size: 14px
+                background-color: $color-tick
+                cursor: pointer
+                &:after
+                  content: attr(data-hour)
+                  position: absolute
+                  top: 12px
+                  left: 0
+                  width: 20px
+                  margin-left: -10px
+                  text-align: center
+              .tl-datetime-hour-last
+                left: auto
+                right: 0
+              .tl-datetime-date
+                position: absolute
+                top: 44px
+                left: 0
+                color: $color-date
+                font-size: 12px
+                &:after
+                  content: attr(data-date)
+                  display: inline-block
+                  width: 10px
+                  margin-left: -5px
+                  text-align: center
+            .tl-datetime-item-current
+              background-color: $color-current
+            .tl-datetime-item-now:after
+                content: ''
+                position: absolute;
+                left: 1px
+                bottom: 0;
+                width: 100%
+                height: 4px
+                background-color: $color-now
     .tl-collapse
       width: 20px
       margin-left: -20px

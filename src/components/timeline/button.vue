@@ -1,12 +1,12 @@
 <template>
   <div
     class="tl-button-wrapper"
+    :class="[{ 'hover': hovering, 'dragging': dragging }, buttonPlace]"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
     @mousedown="onButtonDown"
     @focus="handleMouseEnter"
     @blur="handleMouseLeave"
-    :class="{ 'hover': hovering, 'dragging': dragging }"
     :style="wrapperStyle"
     ref="button">
     <tl-tooltip placement="top" ref="tooltip" :disabled="!showTooltip">
@@ -30,9 +30,9 @@
         type: Number,
         default: 0
       },
-      vertical: {
-        type: Boolean,
-        default: false
+      place: {
+        type: String,
+        default: 'first'
       }
     },
 
@@ -77,7 +77,7 @@
       },
 
       currentPosition () {
-        return `${this.$parent.itemWidth * this.value + 10}px`;
+        return this.$parent.itemWidth * this.value + 10;
       },
 
       enableFormat () {
@@ -89,7 +89,14 @@
       },
 
       wrapperStyle () {
-        return this.vertical ? { bottom: this.currentPosition } : { left: this.currentPosition };
+        if (this.place === 'first') {
+          return { width: `${this.currentPosition}px` };
+        } else {
+          return { width: `${(this.$parent.time.timeList.length - this.value) * this.$parent.itemWidth + 10}px` };
+        }
+      },
+      buttonPlace () {
+        return `tl-button-${this.place}`;
       }
     },
 
@@ -129,12 +136,8 @@
       onDragStart (event) {
         this.dragging = true;
         this.isClick = true;
-        if (this.vertical) {
-          this.startY = event.clientY;
-        } else {
-          this.startX = event.clientX;
-        }
-        this.startPosition = parseFloat(this.currentPosition);
+        this.startX = event.clientX;
+        this.startPosition = this.currentPosition;
         this.newPosition = this.startPosition;
       },
 
@@ -144,13 +147,8 @@
           this.displayTooltip();
           this.$parent.resetSize();
           let diff = 0;
-          if (this.vertical) {
-            this.currentY = event.clientY;
-            diff = (this.startY - this.currentY) / this.$parent.sliderSize * 100;
-          } else {
-            this.currentX = event.clientX;
-            diff = (this.currentX - this.startX) / this.$parent.sliderSize * 100;
-          }
+          this.currentX = event.clientX;
+          diff = (this.currentX - this.startX) / this.$parent.sliderSize * 100;
           this.newPosition = this.startPosition + diff;
           this.setPosition(this.newPosition);
         }
@@ -199,55 +197,60 @@
   };
 </script>
 <style lang="stylus" scoped>
+  @import './css/theme';
+  
   // TODO 播放的时候不允许拖动，wrapper 和 button 都需要更改样式
   // .tl-runway.disabled .tl-button-wrapper.dragging,
   // .tl-runway.disabled .tl-button-wrapper.hover,
   // .tl-runway.disabled .tl-button-wrapper:hover {
 	//   cursor: not-allowed
   .tl-button-wrapper
-    position: absolute;
-    top: 0;
-    width: 10px;
-    height: 100%;
-    text-align: center;
-    transform: translateX(-50%);
-    background-color: transparent;
-    z-index: 1001;
+    position: absolute
+    top: 0
+    height: 100%
+    background-color: transparent
+    z-index: 1001
+    background-color $color-disable
+    cursor: not-allowed
     user-select: none
+    &.tl-button-first
+      left: 0
+      text-align: right
+      .tl-button
+        transform: translateX(50%)
+    &.tl-button-last
+      right: 0
+      text-align: left
+      .tl-button
+        transform: translateX(-50%)
     &:after
-      content: '';
-      display: inline-block;
-      height: 100%;
+      content: ''
+      display: inline-block
+      height: 100%
       vertical-align: middle
     &:hover,
     &.hover
-      cursor: -webkit-grab;
+      cursor: -webkit-grab
 	    cursor: grab
     &.dragging
-      cursor: -webkit-grabbing;
+      cursor: -webkit-grabbing
 	    cursor: grabbing
     .el-tooltip
-      vertical-align: middle;
+      vertical-align: middle
 	    display: inline-block
-    // transform: scale(1);
+    // transform: scale(1)
 	  // cursor: not-allowed
     // background-color: #bfcbd9
     .tl-button
-      width: 10px;
-      height: 60px;
-      transition: .2s;
+      width: 10px
+      height: 60px
+      // transition: .2s
       user-select: none
-    .tl-button.dragging,
     .tl-button.hover,
     .tl-button:hover
-      -ms-transform: scale(1);
-      transform: scale(1);
-      background-color: #1c8de0
-    .tl-button.hover,
-    .tl-button:hover
-      cursor: -webkit-grab;
+      cursor: -webkit-grab
       cursor: grab
     .tl-button.dragging
-      cursor: -webkit-grabbing;
+      cursor: -webkit-grabbing
       cursor: grabbing
 </style>
