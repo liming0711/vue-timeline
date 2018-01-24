@@ -16,7 +16,7 @@
     data () {
       return {
         now: new Date().getTime(),
-        range: [0, 12],
+        range: [0, 18],
         space: 10,
         pause: true
       };

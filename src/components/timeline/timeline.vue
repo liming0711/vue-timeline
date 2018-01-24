@@ -21,7 +21,15 @@
           <div v-show="!collapse" class="tl-control-btn tl-last" :key="'tl-last'"><i class="tl-icon-last"></i></div>
         </transition-group>
       </div>
-      <div class="tl-datetime">
+      <div class="tl-datetime" ref="container">
+        <!-- <div
+          class="tl-datetime-disable tl-datetime-disable_first"
+          :style="{ width: disableFirstWidth + 'px' }">
+        </div> -->
+        <!-- <div
+          class="tl-datetime-placeholder tl-datetime-placeholder_first"
+          :style="{ left: (disableFirstWidth - 5) + 'px' }">
+        </div> -->
         <transition
           name="width-minus2"
           :css="false"
@@ -33,9 +41,13 @@
               v-for="(item, index) in time.timeList"
               :key="item"
               class="tl-datetime-item"
-              :class="{'tl-datetime-item-current': item === time.now}"
-              :style="itemWidth"
-              :data-datetime="time.timeStrList[index]">
+              :class="{
+                'tl-datetime-item-now': item === time.now,
+                'tl-datetime-item-current': index === current
+              }"
+              :style="{ width: itemWidth + 'px' }"
+              :data-datetime="time.timeStrList[index]"
+              @click="onClickItem(item, index)">
               <!-- 显示的小时 -->
               <span
                 v-if="new Date(item).getHours() !== new Date(time.timeList[index - 1]).getHours()"
@@ -54,6 +66,22 @@
             </li>
           </ul>
         </transition>
+        <timeline-button
+          v-model="firstValue"
+          ref="buttonFirst">
+        </timeline-button>
+        <timeline-button
+          v-model="lastValue"
+          ref="buttonLast">
+        </timeline-button>
+        <!-- <div
+          class="tl-datetime-placeholder tl-datetime-placeholder_last"
+          :style="{ right: (disableLastWidth - 5) + 'px' }">
+        </div> -->
+        <!-- <div
+          class="tl-datetime-disable tl-datetime-disable_last"
+          :style="{ width: disableLastWidth + 'px' }">
+        </div> -->
       </div>
     </div>
     <div class="tl-module tl-menu"><i class="tl-icon-setting"></i></div>
@@ -64,19 +92,22 @@
 <script type="text/ecmascript-6">
   // NOTE 必须为 timeline 提供一个宽度，无论是显式的还是隐式的
   // TODO 多层 space；e.g: space = [6、12、30], now = 201701172224；最后剩36分钟但是 space = 30，相除等于1.2
-  import { handle } from './handle';
-  import { throttle } from './throttle';
-  import transition from './transition';
+  // TODO range 支持小数，e.g: [1.5, 13.5]
+  import { handle } from './utils/handle';
+  import { throttle } from './utils/throttle';
+  import transition from './mixins/transition';
+  import TimelineButton from './button.vue';
+  import BScroll from 'better-scroll';
 
   const MENU_BTN_WIDTH = 40;
   const COLLAPSE_BTN_WIDTH = 20;
   const CONTROL_BTN_WIDTH = 96;
   const HOUR_WIDTH = 72;
   const PLAY_SPEED = 400;
-  // const ANIMATION_SPEED = 400;
   const OFFSET_WIDTH = '50%';
 
   export default {
+    name: 'Timeline',
     mixins: [transition],
     props: {
       // 是否支持播放
@@ -127,7 +158,14 @@
       theme: {
         type: String,
         default: 'dark'
+      },
+      showTooltip: {
+        type: Boolean,
+        default: true
       }
+    },
+    components: {
+      TimelineButton
     },
     data () {
       return {
@@ -135,7 +173,11 @@
         collapse: false, // 时间轴是否正处于折叠状态
         suspend: true, // 时间轴是否正处于暂停状态
         timer: null, // 时间轴播放的定时器
-        datetimeWidth: 0 // 时间轴有刻度的区域的宽度
+        datetimeWidth: 0, // 时间轴有刻度的区域的宽度
+        current: 0,
+        firstValue: null,
+        lastValue: null,
+        scrollHandler: null
       };
     },
     computed: {
@@ -145,15 +187,24 @@
       itemWidth () {
         let itemsInHour = isNaN(this.space) ? 1 : 60 / this.space;
         let width = '';
-        console.log(' ====== datetimeWidth ========', this.datetimeWidth, itemsInHour);
         if (HOUR_WIDTH / itemsInHour * this.time.timeList.length > this.datetimeWidth) {
-          width = `${HOUR_WIDTH / itemsInHour}px`;
+          width = HOUR_WIDTH / itemsInHour;
         } else {
-          width = `${this.datetimeWidth / this.time.timeList.length}px`;
+          width = this.datetimeWidth / this.time.timeList.length;
         }
-        return {
-          width
-        };
+        return width;
+      },
+      disableFirstWidth () {
+        // 时间轴刻度区域左侧有 10px 的 padding 值，计算的时候需要加上
+        if (this.time.firstPlaceholderIndex !== 0) {
+          return this.time.firstPlaceholderIndex * this.itemWidth + 10;
+        }
+      },
+      disableLastWidth () {
+        // 时间轴刻度区域右侧有 10px 的 padding 值，计算的时候需要加上
+        if (this.time.lastPlaceholderIndex !== this.time.timeList.length) {
+          return (this.time.timeList.length - this.time.lastPlaceholderIndex) * this.itemWidth + 10;
+        }
       }
     },
     watch: {
@@ -172,6 +223,9 @@
         } else {
           this.doPlay();
         }
+      },
+      current (n, o) {
+        console.log(n, o);
       }
     },
     created () {
@@ -183,11 +237,20 @@
     },
     mounted () {
       this.datetimeWidth = this.$refs.timeline.offsetWidth - MENU_BTN_WIDTH - COLLAPSE_BTN_WIDTH - CONTROL_BTN_WIDTH - 20;
+      this.$nextTick(() => {
+        this.initScroll();
+      });
     },
     methods: {
       init () {
         this.time = handle(this.now, this.range, this.space, this.mode);
+        this.current = this.time.firstPlaceholderIndex;
+        this.firstValue = this.time.firstPlaceholderIndex;
+        this.lastValue = this.time.lastPlaceholderIndex;
         console.log('this.time', this.time);
+      },
+      initScroll () {
+        this.scrollHandler = new BScroll(this.$refs.container, { scrollX: true });
       },
       doSuspend () {
         console.log('暂停播放');
@@ -201,6 +264,9 @@
       onClickPlay () {
         this.suspend = !this.suspend;
         this.$emit('update:pause', this.suspend);
+      },
+      onClickItem (item, index) {
+        this.current = index;
       }
     },
     destroy () {
@@ -240,6 +306,7 @@
       text-align: center
       background-color: $color-background-menu
     .tl-main
+      width: 100%
       padding: 0 20px 0 40px;
       white-space: nowrap
       box-sizing: border-box
@@ -252,10 +319,33 @@
           text-align: center
           line-height: $height-all
       .tl-datetime
-        float: left
+        position: relative
         padding: 0 10px 37px 10px
         white-space: nowrap
         overflow: hidden
+        width: 900px
+        // .tl-datetime-disable
+        //   position: absolute
+        //   top: 0
+        //   height: 100%
+        //   background-color $color-disable
+        //   z-index: 3
+        //   cursor: not-allowed
+        // .tl-datetime-disable_first
+        //   left: 0
+        // .tl-datetime-disable_last
+        //   right: 0
+        // .tl-datetime-placeholder
+        //   position: absolute
+        //   width: 11px
+        //   height: 100%
+        //   background: url(./images/indicator.png) no-repeat center center
+        //   background-size: 11px 60px
+        //   z-index: 4
+        // .tl-datetime-placeholder_first
+        //   top: 0
+        // .tl-datetime-placeholder_last
+        //   top: 0
         .tl-datetime-list
           font-size: 0
           .tl-datetime-item
@@ -266,7 +356,7 @@
             border-bottom: 1px solid $color-tick
             cursor: pointer
             &:hover
-              background-color: $color-hover
+              background-color: $color-current
             &:before
               content: ''
               position: absolute
@@ -308,8 +398,8 @@
                 margin-left: -5px
                 text-align: center
           .tl-datetime-item-current
-            background-color: $color-hover
-            &:after
+            background-color: $color-current
+          .tl-datetime-item-now:after
               content: ''
               position: absolute;
               left: 1px
