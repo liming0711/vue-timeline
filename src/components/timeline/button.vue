@@ -2,16 +2,19 @@
   <div
     class="tl-button-wrapper"
     :class="[{ 'hover': hovering, 'dragging': dragging }, buttonPlace]"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
-    @mousedown="onButtonDown"
-    @focus="handleMouseEnter"
-    @blur="handleMouseLeave"
     :style="wrapperStyle"
     ref="button">
     <tl-tooltip placement="top" ref="tooltip" :disabled="!showTooltip">
       <span slot="content">{{ formatValue }}</span>
-      <img class="tl-button" src="./images/indicator.png" :class="{ 'hover': hovering, 'dragging': dragging }" />
+      <img
+        class="tl-button"
+        :class="{ 'hover': hovering, 'dragging': dragging }"
+        src="./images/indicator.png"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+        @mousedown="onButtonDown"
+        @focus="handleMouseEnter"
+        @blur="handleMouseLeave" />
     </tl-tooltip>
   </div>
 </template>
@@ -43,8 +46,6 @@
         isClick: false,
         startX: 0,
         currentX: 0,
-        startY: 0,
-        currentY: 0,
         startPosition: 0,
         newPosition: null,
         oldValue: this.value
@@ -56,24 +57,16 @@
         return this.$parent.disabled;
       },
 
-      max () {
-        return this.$parent.time.timeList.length + 1;
-      },
-
       min () {
-        return -1;
+        return this.$parent.time.firstPlaceholderIndex;
       },
 
-      step () {
-        return this.$parent.step;
+      max () {
+        return this.$parent.time.lastPlaceholderIndex;
       },
 
       showTooltip () {
         return this.$parent.showTooltip;
-      },
-
-      precision () {
-        return this.$parent.precision;
       },
 
       currentPosition () {
@@ -85,7 +78,8 @@
       },
 
       formatValue () {
-        return (this.enableFormat && this.$parent.formatTooltip(this.value)) || this.value;
+        let index = (this.enableFormat && this.$parent.formatTooltip(this.value)) || this.value;
+        return this.$parent.time.timeStrList[+index];
       },
 
       wrapperStyle () {
@@ -134,24 +128,13 @@
         window.addEventListener('contextmenu', this.onDragEnd);
       },
       onDragStart (event) {
+        console.log('onDragStart');
         this.dragging = true;
         this.isClick = true;
         this.startX = event.clientX;
         this.startPosition = this.currentPosition;
         this.newPosition = this.startPosition;
-      },
-
-      onDragging (event) {
-        if (this.dragging) {
-          this.isClick = false;
-          this.displayTooltip();
-          this.$parent.resetSize();
-          let diff = 0;
-          this.currentX = event.clientX;
-          diff = (this.currentX - this.startX) / this.$parent.sliderSize * 100;
-          this.newPosition = this.startPosition + diff;
-          this.setPosition(this.newPosition);
-        }
+        this.$parent.scrollHandler.disable();
       },
 
       onDragEnd () {
@@ -165,26 +148,36 @@
             this.hideTooltip();
             if (!this.isClick) {
               this.setPosition(this.newPosition);
-              this.$parent.emitChange();
             }
           }, 0);
           window.removeEventListener('mousemove', this.onDragging);
           window.removeEventListener('mouseup', this.onDragEnd);
           window.removeEventListener('contextmenu', this.onDragEnd);
+          this.$parent.scrollHandler.enable();
+        }
+      },
+
+      onDragging (event) {
+        if (this.dragging) {
+          this.isClick = false;
+          this.displayTooltip();
+          let diff = 0;
+          this.currentX = event.clientX;
+          diff = this.currentX - this.startX;
+          this.newPosition = this.startPosition + diff;
+          this.setPosition(this.newPosition);
         }
       },
 
       setPosition (newPosition) {
         if (newPosition === null) return;
-        if (newPosition < 0) {
-          newPosition = 0;
-        } else if (newPosition > 100) {
-          newPosition = 100;
+
+        let value = Math.round(newPosition / this.$parent.itemWidth);
+        if (value > this.max) {
+          value = this.max;
+        } else if (value < this.min) {
+          value = this.min;
         }
-        const lengthPerStep = 100 / ((this.max - this.min) / this.step);
-        const steps = Math.round(newPosition / lengthPerStep);
-        let value = steps * lengthPerStep * (this.max - this.min) * 0.01 + this.min;
-        value = parseFloat(value.toFixed(this.precision));
         this.$emit('input', value);
         this.$nextTick(() => {
           this.$refs.tooltip && this.$refs.tooltip.updatePopper();
@@ -210,7 +203,7 @@
     height: 100%
     background-color: transparent
     z-index: 1001
-    background-color $color-disable
+    background-color: $color-disable
     cursor: not-allowed
     user-select: none
     &.tl-button-first
@@ -228,13 +221,6 @@
       display: inline-block
       height: 100%
       vertical-align: middle
-    &:hover,
-    &.hover
-      cursor: -webkit-grab
-	    cursor: grab
-    &.dragging
-      cursor: -webkit-grabbing
-	    cursor: grabbing
     .el-tooltip
       vertical-align: middle
 	    display: inline-block
@@ -244,13 +230,12 @@
     .tl-button
       width: 10px
       height: 60px
+      cursor: pointer
       // transition: .2s
       user-select: none
     .tl-button.hover,
     .tl-button:hover
-      cursor: -webkit-grab
       cursor: grab
     .tl-button.dragging
-      cursor: -webkit-grabbing
       cursor: grabbing
 </style>

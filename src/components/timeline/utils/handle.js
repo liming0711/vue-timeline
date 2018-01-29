@@ -6,20 +6,7 @@ const MILLISECONDS_IN_MINUTE = 60 * 1000; // 1分钟有60000毫秒标志位
 // 将参数传过来的 now 处理成有效的当前时间，使之与 space 对齐
 // e.g: now = 201701172208, space = 10 --> now = 201701172210(mode = 'round')
 const getValidNow = function (now, minSpace, mode) {
-  let remainder = moment(now).format('mm') % minSpace;
-  let validNow = 0;
-
-  switch (mode) {
-    case 'round':
-      validNow = (remainder >= minSpace / 2) ? now + (minSpace - remainder) * MILLISECONDS_IN_MINUTE : now - remainder * MILLISECONDS_IN_MINUTE;
-      break;
-    case 'ceil':
-      validNow = now + (minSpace - remainder) * MILLISECONDS_IN_MINUTE;
-      break;
-    case 'floor':
-      validNow = now - remainder * MILLISECONDS_IN_MINUTE;
-  }
-  return validNow;
+  return now - moment(now).format('mm') % minSpace * MILLISECONDS_IN_MINUTE;
 };
 // 获取时间轴的持续时间
 // 开始时间非整数时，因为前后占位符的原因持续时间会比 range 多出一个小时
@@ -111,6 +98,6 @@ export const handle = (now, range, space, mode) => {
     timeStrList: timeStrList,
     dateList: dateList,
     firstPlaceholderIndex: firstPlaceholderIndex,
-    lastPlaceholderIndex: timeList.length - (minuteAtStart ? (60 - minuteAtStart) / maxSpace : 0) // 最后占位符索引
+    lastPlaceholderIndex: timeList.length - (minuteAtStart ? (60 - minuteAtStart) / maxSpace - 1 : 0) // 最后占位符索引
   };
 };

@@ -1,7 +1,7 @@
 {
   "name": "vue-timeline-basic",
   "version": "1.0.0",
-  "description": "基础班时间轴",
+  "description": "基础版时间轴",
   "author": "liming@mlogcn.com",
   "private": true,
   "scripts": {
