@@ -6,7 +6,9 @@
       'timeline-collapse': collapse
     }"
     ref="timeline">
-    <div class="tl-module tl-main">
+    <div
+      class="tl-module tl-main"
+      :class="hasCollapse">
       <div class="tl-control">
         <transition-group
           name="width-minus1"
@@ -17,14 +19,29 @@
           @enter="enterControl"
           @leave="leaveControl">
           <tl-tooltip placement="top" content="最早" :key="'tl-first'">
-            <div v-show="!collapse" class="tl-control-btn tl-first" @click="onClickFirst"><i class="tl-icon-first"></i></div>
+            <div
+              v-show="!collapse"
+              class="tl-control-btn tl-first"
+              :class="{ 'tl-control-btn-disable': !suspend }"
+              @click="onClickFirst">
+              <i class="tl-icon-first"></i>
+            </div>
           </tl-tooltip>
           <tl-tooltip placement="top" :key="'tl-play'">
-            <span slot="content">{{ this.suspend ? '播放' : '暂停' }}</span>
-            <div class="tl-control-btn tl-play" @click="onClickPlay"><i :class="playIcon"></i></div>
+            <span slot="content">{{ suspend ? '播放' : '暂停' }}</span>
+            <div
+              class="tl-control-btn tl-play"
+              :class="{ 'tl-control-btn-disable': !supportPlay }"
+              @click="onClickPlay"><i :class="playIcon"></i></div>
           </tl-tooltip>
           <tl-tooltip placement="top" content="最晚" :key="'tl-last'">
-            <div v-show="!collapse" class="tl-control-btn tl-last" @click="onClickLast"><i class="tl-icon-last"></i></div>
+            <div
+              v-show="!collapse"
+              class="tl-control-btn tl-last"
+              :class="{ 'tl-control-btn-disable': !suspend }"
+              @click="onClickLast">
+              <i class="tl-icon-last"></i>
+            </div>
           </tl-tooltip>
         </transition-group>
       </div>
@@ -46,7 +63,8 @@
                   class="tl-datetime-item"
                   :class="{
                     'tl-datetime-item-now': item === time.now,
-                    'tl-datetime-item-current': index === current
+                    'tl-datetime-item-current': index === current,
+                    'tl-datetime-item-disable': !suspend,
                   }"
                   :style="{ width: itemWidth + 'px' }"
                   :data-datetime="time.timeStrList[index]"
@@ -93,7 +111,10 @@
         </div>
       </transition>
     </div>
-    <div v-if="showCollapse" class="tl-module tl-collapse" @click="onClickCollapse"><i class="tl-icon-prev"></i></div>
+    <tl-tooltip v-if="showCollapse">
+      <span slot="content">{{ collapse ? '展开' : '收起' }}</span>
+      <div class="tl-module tl-collapse" @click="onClickCollapse"><i class="tl-icon-prev"></i></div>
+    </tl-tooltip>
   </div>
 </template>
 
@@ -124,11 +145,6 @@
       supportPlay: {
         type: Boolean,
         default: true
-      },
-      // 是否支持翻页
-      supportPage: {
-        type: Boolean,
-        default: false
       },
       // 是否支持时间选择
       datePicker: {
@@ -204,6 +220,9 @@
       playIcon () {
         return this.suspend ? 'tl-icon-play' : 'tl-icon-pause';
       },
+      hasCollapse () {
+        return this.showCollapse ? 'tl-hasCollapse' : '';
+      },
       itemWidth () {
         let itemsInHour = isNaN(this.space) ? 1 : 60 / this.space;
         let width = '';
@@ -276,7 +295,7 @@
       this.init();
     },
     mounted () {
-      this.visibleWidth = this.$refs.timeline.offsetWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH - PADDING_WIDTH;
+      this.visibleWidth = this.$refs.timeline.offsetWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
       this.$nextTick(() => {
         this.initScroll();
         let index = this.time.timeList.findIndex(a => {
@@ -298,54 +317,57 @@
       },
       initScroll () {
         this.scrollHandler = new BScroll(this.$refs.container, { scrollX: true });
+        this.scrollHandler.on('scrollEnd', () => {
+          console.log(' === scrollEnd ====');
+        });
       },
       doSuspend () {
-        console.log('暂停播放');
+        console.log('暂停播放', this.suspend);
         clearTimeout(this.timer);
         this.timer = null;
       },
       doPlay () {
-        console.log('开始播放');
-        this.timer = setInterval(() => {
-          this.current++;
-          if (this.current === this.maxIndex) {
-            if (this.loop) {
-              this.current = this.minIndex;
-              this.doSuspend();
-              this.scrollToElement(this.current).then(() => {
-                this.doPlay();
-              });
-            } else {
-              this.current = this.maxIndex - 1;
-              this.doSuspend();
-            }
+        console.log('开始播放', this.suspend);
+        this.current++;
+        if (this.current === this.maxIndex) {
+          if (this.loop) {
+            this.current = this.minIndex;
+            this.scrollToPixel(this.current);
+          } else {
+            this.current = this.maxIndex - 1;
+            this.onClickPlay();
           }
-          this.scrollToPixel(this.current);
+        }
+        this.timer = setTimeout(() => {
+          this.doPlay();
         }, PLAY_SPEED);
       },
       onClickCollapse () {
         this.collapse = !this.collapse;
       },
       onClickFirst () {
+        if (!this.suspend) { return; }
         this.current = this.minIndex;
-        this.scrollToElement(this.current);
+        this.scrollToPixel(this.current);
       },
       onClickLast () {
+        if (!this.suspend) { return; }
         this.current = this.maxIndex - 1;
-        this.scrollToElement(this.current);
+        this.scrollToPixel(this.current);
       },
       onClickPlay () {
         this.suspend = !this.suspend;
         this.$emit('update:pause', this.suspend);
       },
       onClickItem (index) {
+        if (!this.suspend) { return; }
         this.current = index;
       },
-      scrollToElement (index) {
-        return new Promise(resolve => {
-          resolve(this.scrollHandler.scrollToElement(document.getElementsByClassName('tl-datetime-item')[index], PLAY_SPEED));
-        });
-      },
+      // scrollToElement (index) {
+      //   return new Promise(resolve => {
+      //     resolve(this.scrollHandler.scrollToElement(document.getElementsByClassName('tl-datetime-item')[index], PLAY_SPEED));
+      //   });
+      // },
       scrollToPixel (index) {
         if (index < 0 || index >= this.time.timeList.length) { return; }
         // 计算可视区域内的最小 index 和最大 index
@@ -354,13 +376,19 @@
 
         let visibleMinIndex = scrollX ? (scrollX - PADDING_WIDTH / 2) / this.itemWidth : 0;
         let visibleMaxIndex = (this.visibleWidth + scrollX - PADDING_WIDTH / 2) / this.itemWidth;
-        console.log('====== index =======', scrollX, visibleMinIndex, index, visibleMaxIndex);
 
-        if (index > visibleMinIndex && index < visibleMaxIndex) { return; }
-
-        let xExpectedOffset = this.itemWidth * index - this.visibleWidth + PADDING_WIDTH + this.visibleWidth / 2;
-        let xMaxOffset = this.$refs.list.clientWidth - this.visibleWidth + PADDING_WIDTH;
-        let xOffset = -1 * (xExpectedOffset > xMaxOffset ? xMaxOffset : xExpectedOffset);
+        let xOffset;
+        let xMaxOffset;
+        let xExpectedOffset = this.visibleWidth / 2 - (this.itemWidth * index + PADDING_WIDTH / 2);
+        if (index > visibleMaxIndex) {
+          xMaxOffset = this.visibleWidth - (this.$refs.list.clientWidth + PADDING_WIDTH);
+          xOffset = xExpectedOffset < xMaxOffset ? xMaxOffset : xExpectedOffset;
+        } else if (index < visibleMinIndex) {
+          xMaxOffset = 0;
+          xOffset = xExpectedOffset > xMaxOffset ? xMaxOffset : xExpectedOffset;
+        } else {
+          return;
+        }
 
         this.scrollHandler.scrollTo(xOffset, 0, PLAY_SPEED);
       }
@@ -442,23 +470,31 @@
             background-color: $color-hover
     .tl-main
       width: 100%
-      padding: 0 20px 0 40px;
-      // white-space: nowrap
+      padding: 0 0 0 40px;
       box-sizing: border-box
+      &.tl-hasCollapse
+        padding-right: 20px
       .tl-control
-        height: $height-all
         float: left
+        height: $height-all
         .tl-control-btn
           float: left
           width: 32px
           text-align: center
           line-height: $height-all
+          color: $color-font
           cursor: pointer
+          &:hover
+            color: $color-hover
+          &.tl-control-btn-disable
+            color: $color-disable
+            cursor: not-allowed
       .tl-datetime-container
+        height: $height-all
         overflow: hidden
         .tl-datetime
           position: relative
-          padding: 0 10px 37px 10px
+          padding: 0 10px
           display: inline-block
           vertical-align: middle
           .tl-datetime-list
@@ -468,7 +504,6 @@
               position: relative
               display: inline-block
               height: 22px
-              color: $color-font
               border-bottom: 1px solid $color-tick
               cursor: pointer
               &:hover
@@ -513,16 +548,18 @@
               .tl-datetime-hour-last
                 left: auto
                 right: 0
-            .tl-datetime-item-current
-              background-color: $color-current
-            .tl-datetime-item-now:after
-                content: ''
-                position: absolute;
-                left: 1px
-                bottom: 0;
-                width: 100%
-                height: 4px
-                background-color: $color-now
+              &.tl-datetime-item-disable:hover
+                background-color: $color-disable
+              &.tl-datetime-item-current
+                background-color: $color-current
+              &.tl-datetime-item-now:after
+                  content: ''
+                  position: absolute;
+                  left: 1px
+                  bottom: 0;
+                  width: 100%
+                  height: 4px
+                  background-color: $color-now
     .tl-collapse
       width: 20px
       margin-left: -20px

@@ -13,6 +13,7 @@
       :pause.sync="pause"
       :theme="'dark'"
       datePicker
+      :showCollapse="true"
       @current-time="handleCurrentTime"
       @first-time="handleFirstTime"
       @last-time="handleLastTime"></timeline>
