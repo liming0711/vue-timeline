@@ -113,7 +113,12 @@
     </div>
     <tl-tooltip v-if="showCollapse">
       <span slot="content">{{ collapse ? '展开' : '收起' }}</span>
-      <div class="tl-module tl-collapse" @click="onClickCollapse"><i class="tl-icon-prev"></i></div>
+      <div
+        class="tl-module tl-collapse"
+        :class="{ 'tl-collapse-disable': !suspend }"
+        @click="onClickCollapse">
+        <i class="tl-icon-prev"></i>
+      </div>
     </tl-tooltip>
   </div>
 </template>
@@ -122,6 +127,7 @@
   // NOTE 必须为 timeline 提供一个宽度，无论是显式的还是隐式的
   // TODO 多层 space；e.g: space = [6、12、30], now = 201701172224；最后剩36分钟但是 space = 30，相除等于1.2
   // TODO range 支持小数，e.g: [1.5, 13.5]
+  // TODO 时间字符串的精度可配置
   import BScroll from 'better-scroll';
   import debounce from 'throttle-debounce/debounce';
   // import throttle from 'throttle-debounce/throttle';
@@ -343,6 +349,7 @@
         }, PLAY_SPEED);
       },
       onClickCollapse () {
+        if (!this.suspend) { return; }
         this.collapse = !this.collapse;
       },
       onClickFirst () {
@@ -567,6 +574,9 @@
       text-align: center
       background-color: $color-background-menu
       cursor: pointer
+      &.tl-collapse-disable
+        color: $color-disable
+        cursor: not-allowed
       .tl-icon-prev
         transition: transform $collapse-speed
 </style>
