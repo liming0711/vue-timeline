@@ -36,7 +36,7 @@
       return {
         now: new Date().getTime(),
         range: [-24, 0],
-        space: 60,
+        space: 10,
         pause: true,
         currentTime: 0
       };

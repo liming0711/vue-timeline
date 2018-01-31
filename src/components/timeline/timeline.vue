@@ -310,7 +310,7 @@
       this.visibleWidth = this.timelineWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
       this.$nextTick(() => {
         this.initScroll();
-        this.setNowPosition();
+        this.setNowLabelPosition();
       });
     },
     methods: {
@@ -324,7 +324,7 @@
       initScroll () {
         this.scrollHandler = new BScroll(this.$refs.container, { scrollX: true });
       },
-      setNowPosition () {
+      setNowLabelPosition () {
         let nowIndex = this.time.timeList.findIndex(a => {
           return a === this.time.now;
         });
@@ -334,6 +334,9 @@
           this.current = this.time.timeList.length - 1;
         }
         this.scrollToPixel(this.current);
+      },
+      setCurrentLabelPosition () {
+        // TODO
       },
       doSuspend () {
         console.log('暂停播放', this.suspend);
