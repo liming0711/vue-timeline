@@ -4,8 +4,7 @@ const MINUTE_IN_HOUR = 60; // 1小时有60分钟标志位
 const MILLISECONDS_IN_MINUTE = 60 * 1000; // 1分钟有60000毫秒标志位
 
 // 将参数传过来的 now 处理成有效的当前时间，使之与 space 对齐
-// e.g: now = 201701172208, space = 10 --> now = 201701172210(mode = 'round')
-const getValidNow = function (now, minSpace, mode) {
+const getValidNow = function (now, minSpace) {
   return now - moment(now).format('mm') % minSpace * MILLISECONDS_IN_MINUTE;
 };
 // 获取时间轴的持续时间
@@ -44,7 +43,7 @@ const paramValidate = function (range, space, spaceList) {
   return valid;
 };
 
-export const handle = (now, range, space, mode) => {
+export const handle = (now, range, space) => {
   if (!isNaN(space)) {
     let newSpace = {};
     newSpace[space] = range;
@@ -58,7 +57,7 @@ export const handle = (now, range, space, mode) => {
 
   let minSpace = +spaceList[0];
   let maxSpace = +spaceList[spaceList.length - 1];
-  let validNow = getValidNow(now, minSpace, mode); // 获取修正后的当前时间
+  let validNow = getValidNow(now, minSpace); // 获取修正后的当前时间
   let validStart = validNow - Math.abs(range[0]) * MINUTE_IN_HOUR * MILLISECONDS_IN_MINUTE; // 获取时间轴的有效开始时间（不含占位符）
   let minuteAtStart = +moment(validStart).format('mm'); // 开始时间的分钟数
 

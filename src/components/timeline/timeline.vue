@@ -10,15 +10,8 @@
       class="tl-module tl-main"
       :class="hasCollapse">
       <div class="tl-control">
-        <transition-group
-          name="width-minus1"
-          class="tl-control-inner"
-          tag="div"
-          :css="false"
-          @before-enter="beforeEnterControl"
-          @enter="enterControl"
-          @leave="leaveControl">
-          <tl-tooltip placement="top" content="最早" :key="'tl-first'">
+        <tl-tooltip :disabled="!showTooltip" placement="top" content="最早" :key="'tl-first'">
+          <transition name="fade-in-linear">
             <div
               v-show="!collapse"
               class="tl-control-btn tl-first"
@@ -26,15 +19,17 @@
               @click="onClickFirst">
               <i class="tl-icon-first"></i>
             </div>
-          </tl-tooltip>
-          <tl-tooltip placement="top" :key="'tl-play'">
-            <span slot="content">{{ suspend ? '播放' : '暂停' }}</span>
-            <div
-              class="tl-control-btn tl-play"
-              :class="{ 'tl-control-btn-disable': !supportPlay }"
-              @click="onClickPlay"><i :class="playIcon"></i></div>
-          </tl-tooltip>
-          <tl-tooltip placement="top" content="最晚" :key="'tl-last'">
+          </transition>
+        </tl-tooltip>
+        <tl-tooltip :disabled="!showTooltip" placement="top" :key="'tl-play'">
+          <span slot="content">{{ suspend ? '播放' : '暂停' }}</span>
+          <div
+            class="tl-control-btn tl-play"
+            :class="{ 'tl-control-btn-disable': !supportPlay }"
+            @click="onClickPlay"><i :class="playIcon"></i></div>
+        </tl-tooltip>
+        <tl-tooltip :disabled="!showTooltip" placement="top" content="最晚" :key="'tl-last'">
+          <transition name="fade-in-linear">
             <div
               v-show="!collapse"
               class="tl-control-btn tl-last"
@@ -42,52 +37,46 @@
               @click="onClickLast">
               <i class="tl-icon-last"></i>
             </div>
-          </tl-tooltip>
-        </transition-group>
+          </transition>
+        </tl-tooltip>
       </div>
       <div class="tl-datetime-container" ref="container" :style="datetimeContainerStyle">
         <div class="tl-datetime" ref="datetime">
-          <transition
-            name="width-minus2"
-            :css="false"
-            @before-enter="beforeEnterTime"
-            @enter="enterTime"
-            @leave="leaveTime">
-            <ul v-show="!collapse" class="tl-datetime-list" ref="list">
-              <tl-tooltip
-                v-for="(item, index) in time.timeList"
-                :key="item"
-                placement="top">
-                <span slot="content">{{ index === current ? time.timeStrList[index].slice(-11) : (`${item === time.now ? '当前 ' : ''}${time.timeStrList[index].slice(-5)}`) }}</span>
-                <li
-                  class="tl-datetime-item"
-                  :class="{
-                    'tl-datetime-item-now': item === time.now,
-                    'tl-datetime-item-current': index === current,
-                    'tl-datetime-item-disable': !suspend,
-                  }"
-                  :style="{ width: itemWidth + 'px' }"
-                  :data-datetime="time.timeStrList[index]"
-                  @click="onClickItem(index)">
-                  <!-- 显示的小时 -->
-                  <span
-                    v-if="new Date(item).getHours() !== new Date(time.timeList[index - 1]).getHours()"
-                    class="tl-datetime-hour"
-                    :data-hour="new Date(item).getHours()"></span>
-                  <!-- tl-datetime-hour-last 这个 span 是为了补最后一个小时数字的显示 -->
-                  <span
-                    v-if="index === time.timeList.length - 1"
-                    class="tl-datetime-hour tl-datetime-hour-last"
-                    :data-hour="new Date(item + 60 * 60 * 1000).getHours()"></span>
-                  <!-- 显示的日期 -->
-                  <span
-                    v-if="new Date(item).getDate() !== new Date(time.timeList[index - 1]).getDate()"
-                    class="tl-datetime-date"
-                    :data-date="time.timeStrList[index].substring(5, 10)"></span>
-                </li>
-              </tl-tooltip>
-            </ul>
-          </transition>
+          <ul class="tl-datetime-list" ref="list">
+            <tl-tooltip
+              :disabled="!showTooltip"
+              v-for="(item, index) in time.timeList"
+              :key="item"
+              placement="top">
+              <span slot="content">{{ index === current ? time.timeStrList[index].slice(-11) : (`${item === time.now ? '当前 ' : ''}${time.timeStrList[index].slice(-5)}`) }}</span>
+              <li
+                class="tl-datetime-item"
+                :class="{
+                  'tl-datetime-item-now': item === time.now,
+                  'tl-datetime-item-current': index === current,
+                  'tl-datetime-item-disable': !suspend,
+                }"
+                :style="{ width: itemWidth + 'px' }"
+                :data-datetime="time.timeStrList[index]"
+                @click="onClickItem(index)">
+                <!-- 显示的小时 -->
+                <span
+                  v-if="new Date(item).getHours() !== new Date(time.timeList[index - 1]).getHours()"
+                  class="tl-datetime-hour"
+                  :data-hour="new Date(item).getHours()"></span>
+                <!-- tl-datetime-hour-last 这个 span 是为了补最后一个小时数字的显示 -->
+                <span
+                  v-if="index === time.timeList.length - 1"
+                  class="tl-datetime-hour tl-datetime-hour-last"
+                  :data-hour="new Date(item + 60 * 60 * 1000).getHours()"></span>
+                <!-- 显示的日期 -->
+                <span
+                  v-if="new Date(item).getDate() !== new Date(time.timeList[index - 1]).getDate()"
+                  class="tl-datetime-date"
+                  :data-date="time.timeStrList[index].substring(5, 10)"></span>
+              </li>
+            </tl-tooltip>
+          </ul>
           <tl-button
             v-model="minIndex"
             :place="'first'"
@@ -101,17 +90,17 @@
         </div>
       </div>
     </div>
-    <div class="tl-module tl-menu" @click="showMenu = !showMenu">
+    <div class="tl-module tl-menu" @click="showMenuDetail = !showMenuDetail">
       <i class="tl-icon-setting"></i>
       <transition name="fade-in-linear">
-        <div v-show="showMenu" class="tl-menu-list">
+        <div v-show="showMenuDetail" class="tl-menu-list">
           <div class="tl-menu-item">图层管理</div>
           <div v-if="datePicker" class="tl-menu-item">时间选择</div>
           <div v-if="speedSetting" class="tl-menu-item">倍速播放</div>
         </div>
       </transition>
     </div>
-    <tl-tooltip v-if="showCollapse">
+    <tl-tooltip :disabled="!showTooltip" v-if="showCollapse">
       <span slot="content">{{ collapse ? '展开' : '收起' }}</span>
       <div
         class="tl-module tl-collapse"
@@ -124,28 +113,25 @@
 </template>
 
 <script type="text/ecmascript-6">
-  // NOTE 必须为 timeline 提供一个宽度，无论是显式的还是隐式的
   // TODO 多层 space；e.g: space = [6、12、30], now = 201701172224；最后剩36分钟但是 space = 30，相除等于1.2
   // TODO range 支持小数，e.g: [1.5, 13.5]
   // TODO 时间字符串的精度可配置
   import BScroll from 'better-scroll';
   import debounce from 'throttle-debounce/debounce';
-  // import throttle from 'throttle-debounce/throttle';
   import { handle } from './utils/handle';
-  import transition from './mixins/transition';
+  import Velocity from 'velocity-animate';
   import TlButton from './button.vue';
   import TlTooltip from './tooltip';
+  import { SPEED_DURATION } from './utils/config';
 
   const MENU_BTN_WIDTH = 40;
   const COLLAPSE_BTN_WIDTH = 20;
   const CONTROL_BTN_WIDTH = 96;
   const HOUR_WIDTH = 72;
-  const PLAY_SPEED = 400;
   const PADDING_WIDTH = 20;
 
   export default {
     name: 'Timeline',
-    mixins: [transition],
     props: {
       // 是否支持播放
       supportPlay: {
@@ -162,14 +148,10 @@
         type: Boolean,
         default: false
       },
-      // 时间轴时间对齐方式
-      mode: {
-        type: String,
-        default: 'floor'
-      },
       // 时间轴播放是否暂停
       pause: {
         type: Boolean,
+        required: true,
         default: true
       },
       // 当前时间，毫秒数的时间戳
@@ -202,6 +184,10 @@
       loop: {
         type: Boolean,
         default: true
+      },
+      freeze: {
+        type: Boolean,
+        default: false
       }
     },
     components: {
@@ -215,20 +201,24 @@
         suspend: true, // 时间轴是否正处于暂停状态
         timer: null, // 时间轴播放的定时器
         visibleWidth: 0, // 时间轴有刻度的区域的宽度
-        current: 0,
-        minIndex: null,
-        maxIndex: null,
-        scrollHandler: null,
-        showMenu: false
+        timelineWidth: 0, // 整个时间轴容器的宽度
+        current: -1, // 当前时间的索引值
+        minIndex: null, // 播放区间最小值的索引
+        maxIndex: null, // 播放区间最大值的索引
+        scrollHandler: null, // scroll 实例的句柄
+        showMenuDetail: false // 是否显示 menu 菜单详情
       };
     },
     computed: {
+      // 播放按钮的状态，显示播放或者暂停
       playIcon () {
         return this.suspend ? 'tl-icon-play' : 'tl-icon-pause';
       },
+      // 是否显示收起 button
       hasCollapse () {
         return this.showCollapse ? 'tl-hasCollapse' : '';
       },
+      // 时间轴上每一格的宽度
       itemWidth () {
         let itemsInHour = isNaN(this.space) ? 1 : 60 / this.space;
         let width = '';
@@ -239,6 +229,7 @@
         }
         return width;
       },
+      // 时间轴刻度区域的宽度
       datetimeContainerStyle () {
         return {
           width: `${this.visibleWidth}px`
@@ -263,7 +254,7 @@
         }
       },
       current (n) {
-        this.$emit('current-time', this.time.timeList[n]);
+        this.$emit('current', this.time.timeList[n]);
       },
       minIndex (n, o) {
         if (n >= this.maxIndex) {
@@ -276,7 +267,7 @@
           if (this.current < this.minIndex) {
             this.current = this.minIndex;
           }
-          this.$emit('first-time', this.time.timeList[this.minIndex]);
+          this.$emit('minimum', this.minIndex);
         })();
       },
       maxIndex (n, o) {
@@ -290,8 +281,22 @@
           if (this.current > this.maxIndex) {
             this.current = this.maxIndex - 1;
           }
-          this.$emit('last-time', this.time.timeList[this.maxIndex - 1]);
+          this.$emit('maximum', this.maxIndex);
         })();
+      },
+      collapse (n, o) {
+        // 时间轴收起时过渡动画
+        let width = 0;
+        if (n) {
+          width = '108px';
+        } else {
+          width = `${this.timelineWidth}px`;
+        }
+        Velocity(
+          this.$refs.timeline,
+          { width },
+          { duration: SPEED_DURATION }
+        );
       }
     },
     created () {
@@ -301,31 +306,34 @@
       this.init();
     },
     mounted () {
-      this.visibleWidth = this.$refs.timeline.offsetWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
+      this.timelineWidth = this.$refs.timeline.offsetWidth;
+      this.visibleWidth = this.timelineWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
       this.$nextTick(() => {
         this.initScroll();
-        let index = this.time.timeList.findIndex(a => {
-          return a === this.time.now;
-        });
-        this.scrollToPixel(index);
+        this.setNowPosition();
       });
     },
     methods: {
       init () {
-        this.time = handle(this.now, this.range, this.space, this.mode);
-        let nowIndex = this.time.timeList.findIndex(a => { return a === this.time.now; });
-        if (nowIndex > -1) {
-          this.current = nowIndex;
-        }
+        this.time = handle(this.now, this.range, this.space);
         this.minIndex = this.time.firstPlaceholderIndex;
         this.maxIndex = this.time.lastPlaceholderIndex;
+        this.$emit('time', this.time);
         console.log('this.time', this.time);
       },
       initScroll () {
         this.scrollHandler = new BScroll(this.$refs.container, { scrollX: true });
-        this.scrollHandler.on('scrollEnd', () => {
-          console.log(' === scrollEnd ====');
+      },
+      setNowPosition () {
+        let nowIndex = this.time.timeList.findIndex(a => {
+          return a === this.time.now;
         });
+        if (nowIndex > -1) {
+          this.current = nowIndex;
+        } else {
+          this.current = this.time.timeList.length - 1;
+        }
+        this.scrollToPixel(this.current);
       },
       doSuspend () {
         console.log('暂停播放', this.suspend);
@@ -346,7 +354,7 @@
         }
         this.timer = setTimeout(() => {
           this.doPlay();
-        }, PLAY_SPEED);
+        }, SPEED_DURATION);
       },
       onClickCollapse () {
         if (!this.suspend) { return; }
@@ -363,6 +371,7 @@
         this.scrollToPixel(this.current);
       },
       onClickPlay () {
+        if (!this.supportPlay) { return; }
         this.suspend = !this.suspend;
         this.$emit('update:pause', this.suspend);
       },
@@ -370,11 +379,6 @@
         if (!this.suspend) { return; }
         this.current = index;
       },
-      // scrollToElement (index) {
-      //   return new Promise(resolve => {
-      //     resolve(this.scrollHandler.scrollToElement(document.getElementsByClassName('tl-datetime-item')[index], PLAY_SPEED));
-      //   });
-      // },
       scrollToPixel (index) {
         if (index < 0 || index >= this.time.timeList.length) { return; }
         // 计算可视区域内的最小 index 和最大 index
@@ -397,7 +401,7 @@
           return;
         }
 
-        this.scrollHandler.scrollTo(xOffset, 0, PLAY_SPEED);
+        this.scrollHandler.scrollTo(xOffset, 0, SPEED_DURATION);
       }
     },
     destroy () {
@@ -425,7 +429,6 @@
     height: $height-all
     color: $color-font
     background-color: $color-background
-    // overflow: hidden
     &.timeline-light
       background-color: $color-background-l
     &.timeline-collapse
@@ -486,7 +489,7 @@
         height: $height-all
         .tl-control-btn
           float: left
-          width: 32px
+          width: 16px
           text-align: center
           line-height: $height-all
           color: $color-font
@@ -496,6 +499,12 @@
           &.tl-control-btn-disable
             color: $color-disable
             cursor: not-allowed
+          &.tl-first
+            padding-left: 8px
+          &.tl-play
+            width: 48px
+          &.tl-last
+            padding-right: 8px
       .tl-datetime-container
         height: $height-all
         overflow: hidden

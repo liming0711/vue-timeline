@@ -8,7 +8,7 @@
       <span slot="content">{{ formatValue }}</span>
       <img
         class="tl-button"
-        :class="{ 'hover': hovering, 'dragging': dragging }"
+        :class="{ 'hover': hovering, 'dragging': dragging, 'disabled': !suspend || freeze }"
         src="./images/indicator.png"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
@@ -53,33 +53,24 @@
     },
 
     computed: {
-      disabled () {
-        return this.$parent.disabled;
-      },
-
-      min () {
-        return this.$parent.time.firstPlaceholderIndex;
-      },
-
-      max () {
-        return this.$parent.time.lastPlaceholderIndex;
+      suspend () {
+        return this.$parent.suspend;
       },
 
       showTooltip () {
         return this.$parent.showTooltip;
       },
 
+      freeze () {
+        return this.$parent.freeze;
+      },
+
       currentPosition () {
         return this.$parent.itemWidth * this.value + 10;
       },
 
-      enableFormat () {
-        return this.$parent.formatTooltip instanceof Function;
-      },
-
       formatValue () {
-        let index = (this.enableFormat && this.$parent.formatTooltip(this.value)) || this.value;
-        return this.$parent.time.timeStrList[+index];
+        return this.$parent.time.timeStrList[+this.value];
       },
 
       wrapperStyle () {
@@ -120,7 +111,7 @@
       },
 
       onButtonDown (event) {
-        if (this.disabled) return;
+        if (!this.suspend || this.freeze) { return; }
         event.preventDefault();
         this.onDragStart(event);
         window.addEventListener('mousemove', this.onDragging);
@@ -128,7 +119,6 @@
         window.addEventListener('contextmenu', this.onDragEnd);
       },
       onDragStart (event) {
-        console.log('onDragStart');
         this.dragging = true;
         this.isClick = true;
         this.startX = event.clientX;
@@ -139,10 +129,8 @@
 
       onDragEnd () {
         if (this.dragging) {
-          /*
-           * 防止在 mouseup 后立即触发 click，导致滑块有几率产生一小段位移
-           * 不使用 preventDefault 是因为 mouseup 和 click 没有注册在同一个 DOM 上
-           */
+          // 防止在 mouseup 后立即触发 click，导致滑块有几率产生一小段位移
+          // 不使用 preventDefault 是因为 mouseup 和 click 没有注册在同一个 DOM 上
           setTimeout(() => {
             this.dragging = false;
             this.hideTooltip();
@@ -173,11 +161,7 @@
         if (newPosition === null) return;
 
         let value = Math.round(newPosition / this.$parent.itemWidth);
-        if (value > this.max) {
-          value = this.max;
-        } else if (value < this.min) {
-          value = this.min;
-        }
+
         this.$emit('input', value);
         this.$nextTick(() => {
           this.$refs.tooltip && this.$refs.tooltip.updatePopper();
@@ -191,12 +175,7 @@
 </script>
 <style lang="stylus" scoped>
   @import './css/theme';
-  
-  // TODO 播放的时候不允许拖动，wrapper 和 button 都需要更改样式
-  // .tl-runway.disabled .tl-button-wrapper.dragging,
-  // .tl-runway.disabled .tl-button-wrapper.hover,
-  // .tl-runway.disabled .tl-button-wrapper:hover {
-	//   cursor: not-allowed
+
   .tl-button-wrapper
     position: absolute
     top: 0
@@ -221,21 +200,18 @@
       display: inline-block
       height: 100%
       vertical-align: middle
-    .el-tooltip
-      vertical-align: middle
+    .tl-tooltip
 	    display: inline-block
-    // transform: scale(1)
-	  // cursor: not-allowed
-    // background-color: #bfcbd9
     .tl-button
       width: 10px
       height: 60px
       cursor: pointer
-      // transition: .2s
       user-select: none
     .tl-button.hover,
     .tl-button:hover
       cursor: grab
     .tl-button.dragging
       cursor: grabbing
+    .tl-button.disabled
+      cursor: not-allowed
 </style>

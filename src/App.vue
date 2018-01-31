@@ -13,10 +13,13 @@
       :pause.sync="pause"
       :theme="'dark'"
       datePicker
-      :showCollapse="true"
-      @current-time="handleCurrentTime"
-      @first-time="handleFirstTime"
-      @last-time="handleLastTime"></timeline>
+      :show-collapse="true"
+      :show-tooltip="true"
+      :freeze="false"
+      @current="handleCurrentTime"
+      @minimum="handleMinIndex"
+      @maximum="handleMaxIndex"
+      @time="handleTimeObj"></timeline>
   </div>
 </template>
 
@@ -33,7 +36,7 @@
       return {
         now: new Date().getTime(),
         range: [-24, 0],
-        space: 10,
+        space: 60,
         pause: true,
         currentTime: 0
       };
@@ -42,11 +45,14 @@
       handleCurrentTime (item) {
         this.currentTime = moment(item).format('YYYY-MM-DD HH:mm');
       },
-      handleFirstTime (item) {
-        console.log('handleFirstTime in App.vue', item);
+      handleMinIndex (index) {
+        console.log('App.vue: handleFirstTime', index);
       },
-      handleLastTime (item) {
-        console.log('handleLastTime in App.vue', item);
+      handleMaxIndex (index) {
+        console.log('App.vue: handleLastTime', index);
+      },
+      handleTimeObj (list) {
+        console.log('App.vue: handleTimeObj', list);
       }
     }
   };
