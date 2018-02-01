@@ -49,7 +49,7 @@
 data () {
   return {
     now: new Date().getTime(),
-    range: [-24, 0],
+    range: [-24, 12],
     space: 10,
     pause: true
   };

@@ -1,0 +1,40 @@
+@import './theme';
+
+.tl-button-wrapper
+  position: absolute
+  top: 0
+  height: 100%
+  background-color: transparent
+  z-index: 1001
+  background-color: $color-disable
+  cursor: not-allowed
+  user-select: none
+  &.tl-button-first
+    left: 0
+    text-align: right
+    .tl-button
+      transform: translateX(50%)
+  &.tl-button-last
+    right: 0
+    text-align: left
+    .tl-button
+      transform: translateX(-50%)
+  &:after
+    content: ''
+    display: inline-block
+    height: 100%
+    vertical-align: middle
+  .tl-tooltip
+    display: inline-block
+  .tl-button
+    width: 10px
+    height: 60px
+    cursor: pointer
+    user-select: none
+  .tl-button.hover,
+  .tl-button:hover
+    cursor: grab
+  .tl-button.dragging
+    cursor: grabbing
+  .tl-button.disabled
+    cursor: not-allowed
