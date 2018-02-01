@@ -15,14 +15,14 @@
             <div
               v-show="!collapse"
               class="tl-control-btn tl-first"
-              :class="{ 'tl-control-btn-disable': !suspend }"
+              :class="{ 'tl-control-btn-disable': !pause }"
               @click="onClickFirst">
               <i class="tl-icon-first"></i>
             </div>
           </transition>
         </tl-tooltip>
         <tl-tooltip :disabled="!showTooltip" placement="top" :key="'tl-play'">
-          <span slot="content">{{ suspend ? '播放' : '暂停' }}</span>
+          <span slot="content">{{ pause ? '播放' : '暂停' }}</span>
           <div
             class="tl-control-btn tl-play"
             :class="{ 'tl-control-btn-disable': !supportPlay }"
@@ -33,7 +33,7 @@
             <div
               v-show="!collapse"
               class="tl-control-btn tl-last"
-              :class="{ 'tl-control-btn-disable': !suspend }"
+              :class="{ 'tl-control-btn-disable': !pause }"
               @click="onClickLast">
               <i class="tl-icon-last"></i>
             </div>
@@ -54,7 +54,7 @@
                 :class="{
                   'tl-datetime-item-now': item === time.now,
                   'tl-datetime-item-current': index === current,
-                  'tl-datetime-item-disable': !suspend,
+                  'tl-datetime-item-disable': !pause,
                 }"
                 :style="{ width: itemWidth + 'px' }"
                 :data-datetime="time.timeStrList[index]"
@@ -77,16 +77,16 @@
               </li>
             </tl-tooltip>
           </ul>
-          <tl-button
+          <tl-slider
             v-model="minIndex"
             :place="'first'"
             ref="buttonFirst">
-          </tl-button>
-          <tl-button
+          </tl-slider>
+          <tl-slider
             v-model="maxIndex"
             :place="'last'"
             ref="buttonLast">
-          </tl-button>
+          </tl-slider>
         </div>
       </div>
     </div>
@@ -104,7 +104,7 @@
       <span slot="content">{{ collapse ? '展开' : '收起' }}</span>
       <div
         class="tl-module tl-collapse"
-        :class="{ 'tl-collapse-disable': !suspend }"
+        :class="{ 'tl-collapse-disable': !pause }"
         @click="onClickCollapse">
         <i class="tl-icon-prev"></i>
       </div>
@@ -120,8 +120,8 @@
   import debounce from 'throttle-debounce/debounce';
   import { handle } from './utils/handle';
   import Velocity from 'velocity-animate';
-  import TlButton from './button.vue';
-  import TlTooltip from './tooltip';
+  import TlSlider from './lib/slider/slider.vue';
+  import TlTooltip from './lib/tooltip';
   import { SPEED_DURATION } from './utils/config';
 
   const MENU_BTN_WIDTH = 40;
@@ -129,6 +129,7 @@
   const CONTROL_BTN_WIDTH = 96;
   const HOUR_WIDTH = 72;
   const PADDING_WIDTH = 20;
+  const COLLAPSE_WIDTH = 108;
 
   export default {
     name: 'Timeline',
@@ -181,24 +182,25 @@
         type: Boolean,
         default: true
       },
+      // 时间轴是否循环播放
       loop: {
         type: Boolean,
         default: true
       },
+      // 时间轴的播放区间是否可以改变
       freeze: {
         type: Boolean,
         default: false
       }
     },
     components: {
-      TlButton,
+      TlSlider,
       TlTooltip
     },
     data () {
       return {
         time: {},
         collapse: false, // 时间轴是否正处于折叠状态
-        suspend: true, // 时间轴是否正处于暂停状态
         timer: null, // 时间轴播放的定时器
         visibleWidth: 0, // 时间轴有刻度的区域的宽度
         timelineWidth: 0, // 整个时间轴容器的宽度
@@ -212,7 +214,7 @@
     computed: {
       // 播放按钮的状态，显示播放或者暂停
       playIcon () {
-        return this.suspend ? 'tl-icon-play' : 'tl-icon-pause';
+        return this.pause ? 'tl-icon-play' : 'tl-icon-pause';
       },
       // 是否显示收起 button
       hasCollapse () {
@@ -220,12 +222,12 @@
       },
       // 时间轴上每一格的宽度
       itemWidth () {
-        let itemsInHour = isNaN(this.space) ? 1 : 60 / this.space;
+        let itemsInHour = !isNaN(this.space) && this.space < 60 ? 60 / this.space : 1; // 当 this.space 不是数字或大于 60 的时候 itemsInHour = 1
         let width = '';
         if (HOUR_WIDTH / itemsInHour * this.time.timeList.length > this.visibleWidth) {
           width = HOUR_WIDTH / itemsInHour;
         } else {
-          width = this.visibleWidth / this.time.timeList.length;
+          width = (this.visibleWidth - PADDING_WIDTH) / this.time.timeList.length;
         }
         return width;
       },
@@ -248,7 +250,7 @@
       },
       pause (n) {
         if (n) {
-          this.doSuspend();
+          this.doPause();
         } else {
           this.doPlay();
         }
@@ -288,7 +290,7 @@
         // 时间轴收起时过渡动画
         let width = 0;
         if (n) {
-          width = '108px';
+          width = `${COLLAPSE_WIDTH}px`;
         } else {
           width = `${this.timelineWidth}px`;
         }
@@ -333,56 +335,52 @@
         } else {
           this.current = this.time.timeList.length - 1;
         }
-        this.scrollToPixel(this.current);
+        this.scrollTo(this.current);
       },
-      setCurrentLabelPosition () {
-        // TODO
-      },
-      doSuspend () {
-        console.log('暂停播放', this.suspend);
+      doPause () {
+        console.log('暂停播放', this.pause);
         clearTimeout(this.timer);
         this.timer = null;
       },
       doPlay () {
-        console.log('开始播放', this.suspend);
+        console.log('开始播放', this.pause);
         this.current++;
         if (this.current === this.maxIndex) {
           if (this.loop) {
             this.current = this.minIndex;
-            this.scrollToPixel(this.current);
           } else {
             this.current = this.maxIndex - 1;
             this.onClickPlay();
           }
         }
+        this.scrollTo(this.current);
         this.timer = setTimeout(() => {
           this.doPlay();
         }, SPEED_DURATION);
       },
       onClickCollapse () {
-        if (!this.suspend) { return; }
+        if (!this.pause) { return; }
         this.collapse = !this.collapse;
       },
       onClickFirst () {
-        if (!this.suspend) { return; }
+        if (!this.pause) { return; }
         this.current = this.minIndex;
-        this.scrollToPixel(this.current);
+        this.scrollTo(this.current);
       },
       onClickLast () {
-        if (!this.suspend) { return; }
+        if (!this.pause) { return; }
         this.current = this.maxIndex - 1;
-        this.scrollToPixel(this.current);
+        this.scrollTo(this.current);
       },
       onClickPlay () {
         if (!this.supportPlay) { return; }
-        this.suspend = !this.suspend;
-        this.$emit('update:pause', this.suspend);
+        this.$emit('update:pause', !this.pause);
       },
       onClickItem (index) {
-        if (!this.suspend) { return; }
+        if (!this.pause) { return; }
         this.current = index;
       },
-      scrollToPixel (index) {
+      scrollTo (index) {
         if (index < 0 || index >= this.time.timeList.length) { return; }
         // 计算可视区域内的最小 index 和最大 index
         let scrollXMatrix = document.defaultView.getComputedStyle(this.$refs.datetime, null).transform.replace(/[^0-9\-.,]/g, '').split(',');
@@ -420,175 +418,5 @@
 </style>
 
 <style lang="stylus" scoped>
-  @import './css/reset';
-  @import './css/icon';
-  @import './css/theme';
-  @import './css/transition';
-  
-  $height-all = 60px
-  $collapse-speed = .4s
-
-  .timeline
-    height: $height-all
-    color: $color-font
-    background-color: $color-background
-    &.timeline-light
-      background-color: $color-background-l
-    &.timeline-collapse
-      .tl-icon-prev
-        transform: rotate(180deg)
-    .tl-module
-      float: left
-      height: 100%
-      line-height: $height-all
-    .tl-menu
-      width: 40px
-      margin-left: -100%
-      font-size: 24px
-      text-align: center
-      background-color: $color-background-menu
-      cursor: pointer
-      .tl-menu-list
-        position: absolute
-        bottom: 68px
-        width: 64px
-        font-size: 0
-        .tl-menu-item
-          text-align: center
-          line-height: 24px
-          font-size: 12px
-          background-color: $color-background
-          &:first-child
-            border-top-left-radius: 4px
-            border-top-right-radius: 4px
-          &:last-child
-            border-bottom-left-radius: 4px
-            border-bottom-right-radius: 4px
-            &:after
-              content: ''
-              position: absolute
-              display: block
-              left: 14px
-              width: 0
-              height: 0
-              border-color: transparent
-              border-style: solid
-              border-width: 6px
-              bottom: -6px
-              border-top-color: $color-background
-              border-bottom-width: 0
-            &:hover:after
-              border-top-color: $color-hover
-          &:hover
-            background-color: $color-hover
-    .tl-main
-      width: 100%
-      padding: 0 0 0 40px;
-      box-sizing: border-box
-      &.tl-hasCollapse
-        padding-right: 20px
-      .tl-control
-        float: left
-        height: $height-all
-        .tl-control-btn
-          float: left
-          width: 16px
-          text-align: center
-          line-height: $height-all
-          color: $color-font
-          cursor: pointer
-          &:hover
-            color: $color-hover
-          &.tl-control-btn-disable
-            color: $color-disable
-            cursor: not-allowed
-          &.tl-first
-            padding-left: 8px
-          &.tl-play
-            width: 48px
-          &.tl-last
-            padding-right: 8px
-      .tl-datetime-container
-        height: $height-all
-        overflow: hidden
-        .tl-datetime
-          position: relative
-          padding: 0 10px
-          display: inline-block
-          vertical-align: middle
-          .tl-datetime-list
-            font-size: 0
-            white-space: nowrap
-            .tl-datetime-item
-              position: relative
-              display: inline-block
-              height: 22px
-              border-bottom: 1px solid $color-tick
-              cursor: pointer
-              &:hover
-                background-color: $color-current
-              &:before
-                content: ''
-                position: absolute
-                left: 0
-                height: 4px
-                bottom: 0
-                width: 1px
-                background-color: $color-tick
-              .tl-datetime-hour,
-              .tl-datetime-date
-                position: absolute
-                bottom: 0
-                left: 0
-                width: 1px
-                height: 8px
-                cursor: pointer
-                &:after
-                  position: absolute
-                  left: 0
-                  line-height: 20px
-                  text-align: center
-              .tl-datetime-hour
-                font-size: 14px
-                background-color: $color-tick
-                &:after
-                  content: attr(data-hour)
-                  top: 8px
-                  width: 20px
-                  margin-left: -10px
-              .tl-datetime-date
-                font-size: 12px
-                color: $color-date
-                &:after
-                  content: attr(data-date)
-                  top: 22px
-                  width: 10px
-                  margin-left: -5px
-              .tl-datetime-hour-last
-                left: auto
-                right: 0
-              &.tl-datetime-item-disable:hover
-                background-color: $color-disable
-              &.tl-datetime-item-current
-                background-color: $color-current
-              &.tl-datetime-item-now:after
-                  content: ''
-                  position: absolute;
-                  left: 1px
-                  bottom: 0;
-                  width: 100%
-                  height: 4px
-                  background-color: $color-now
-    .tl-collapse
-      width: 20px
-      margin-left: -20px
-      font-size: 12px
-      text-align: center
-      background-color: $color-background-menu
-      cursor: pointer
-      &.tl-collapse-disable
-        color: $color-disable
-        cursor: not-allowed
-      .tl-icon-prev
-        transition: transform $collapse-speed
+  @import './css/timeline';
 </style>

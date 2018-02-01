@@ -1,0 +1,171 @@
+@import './reset';
+@import './icon';
+@import './theme';
+@import './transition';
+
+$height-all = 60px
+$collapse-speed = .4s
+
+.timeline
+  height: $height-all
+  color: $color-font
+  background-color: $color-background
+  &.timeline-light
+    background-color: $color-background-l
+  &.timeline-collapse
+    .tl-icon-prev
+      transform: rotate(180deg)
+  .tl-module
+    float: left
+    height: 100%
+    line-height: $height-all
+  .tl-menu
+    width: 40px
+    margin-left: -100%
+    font-size: 24px
+    text-align: center
+    background-color: $color-background-menu
+    cursor: pointer
+    .tl-menu-list
+      position: absolute
+      bottom: 68px
+      width: 64px
+      font-size: 0
+      .tl-menu-item
+        text-align: center
+        line-height: 24px
+        font-size: 12px
+        background-color: $color-background
+        &:first-child
+          border-top-left-radius: 4px
+          border-top-right-radius: 4px
+        &:last-child
+          border-bottom-left-radius: 4px
+          border-bottom-right-radius: 4px
+          &:after
+            content: ''
+            position: absolute
+            display: block
+            left: 14px
+            width: 0
+            height: 0
+            border-color: transparent
+            border-style: solid
+            border-width: 6px
+            bottom: -6px
+            border-top-color: $color-background
+            border-bottom-width: 0
+          &:hover:after
+            border-top-color: $color-hover
+        &:hover
+          background-color: $color-hover
+  .tl-main
+    width: 100%
+    padding: 0 0 0 40px;
+    box-sizing: border-box
+    &.tl-hasCollapse
+      padding-right: 20px
+    .tl-control
+      float: left
+      height: $height-all
+      .tl-control-btn
+        float: left
+        width: 16px
+        text-align: center
+        line-height: $height-all
+        color: $color-font
+        cursor: pointer
+        &:hover
+          color: $color-hover
+        &.tl-control-btn-disable
+          color: $color-disable
+          cursor: not-allowed
+        &.tl-first
+          padding-left: 8px
+        &.tl-play
+          width: 48px
+        &.tl-last
+          padding-right: 8px
+    .tl-datetime-container
+      height: $height-all
+      overflow: hidden
+      .tl-datetime
+        position: relative
+        padding: 0 10px
+        display: inline-block
+        vertical-align: middle
+        .tl-datetime-list
+          font-size: 0
+          white-space: nowrap
+          .tl-datetime-item
+            position: relative
+            display: inline-block
+            height: 22px
+            border-bottom: 1px solid $color-tick
+            cursor: pointer
+            &:hover
+              background-color: $color-current
+            &:before
+              content: ''
+              position: absolute
+              left: 0
+              height: 4px
+              bottom: 0
+              width: 1px
+              background-color: $color-tick
+            .tl-datetime-hour,
+            .tl-datetime-date
+              position: absolute
+              bottom: 0
+              left: 0
+              width: 1px
+              height: 8px
+              cursor: pointer
+              &:after
+                position: absolute
+                left: 0
+                line-height: 20px
+                text-align: center
+            .tl-datetime-hour
+              font-size: 14px
+              background-color: $color-tick
+              &:after
+                content: attr(data-hour)
+                top: 8px
+                width: 20px
+                margin-left: -10px
+            .tl-datetime-date
+              font-size: 12px
+              color: $color-date
+              &:after
+                content: attr(data-date)
+                top: 22px
+                width: 10px
+                margin-left: -5px
+            .tl-datetime-hour-last
+              left: auto
+              right: 0
+            &.tl-datetime-item-disable:hover
+              background-color: $color-disable
+            &.tl-datetime-item-current
+              background-color: $color-current
+            &.tl-datetime-item-now:after
+                content: ''
+                position: absolute;
+                left: 1px
+                bottom: 0;
+                width: 100%
+                height: 4px
+                background-color: $color-now
+  .tl-collapse
+    width: 20px
+    margin-left: -20px
+    font-size: 12px
+    text-align: center
+    background-color: $color-background-menu
+    cursor: pointer
+    &.tl-collapse-disable
+      color: $color-disable
+      cursor: not-allowed
+    .tl-icon-prev
+      transition: transform $collapse-speed

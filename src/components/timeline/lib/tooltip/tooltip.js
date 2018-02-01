@@ -1,4 +1,4 @@
-import Popper from '../mixins/vue-popper';
+import Popper from '../../mixins/vue-popper';
 import debounce from 'throttle-debounce/debounce';
 import Vue from 'vue';
 

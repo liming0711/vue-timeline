@@ -9,7 +9,7 @@
       <img
         class="tl-button"
         :class="{ 'hover': hovering, 'dragging': dragging, 'disabled': !suspend || freeze }"
-        src="./images/indicator.png"
+        src="../../images/indicator.png"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
         @mousedown="onButtonDown"
@@ -20,9 +20,9 @@
 </template>
 
 <script>
-  import TlTooltip from './tooltip';
+  import TlTooltip from '../tooltip';
   export default {
-    name: 'TimelineButton',
+    name: 'TlSlider',
 
     components: {
       TlTooltip
@@ -174,7 +174,7 @@
   };
 </script>
 <style lang="stylus" scoped>
-  @import './css/theme';
+  @import '../../css/theme';
 
   .tl-button-wrapper
     position: absolute
