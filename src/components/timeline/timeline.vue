@@ -5,6 +5,7 @@
       'timeline-light': theme === 'light',
       'timeline-collapse': collapse
     }"
+    :style="timelineWidthStyle"
     ref="timeline">
     <div
       class="tl-module tl-main"
@@ -40,7 +41,7 @@
           </transition>
         </tl-tooltip>
       </div>
-      <div class="tl-datetime-container" ref="container" :style="datetimeContainerStyle">
+      <div class="tl-datetime-main" ref="datetime" :style="datetimeWidthStyle">
         <div class="tl-datetime" ref="datetime">
           <ul class="tl-datetime-list" ref="list">
             <tl-tooltip
@@ -48,12 +49,12 @@
               v-for="(item, index) in time.timeList"
               :key="item"
               placement="top">
-              <span slot="content">{{ index === current ? time.timeStrList[index].slice(-11) : (`${item === time.now ? '当前 ' : ''}${time.timeStrList[index].slice(-5)}`) }}</span>
+              <span slot="content">{{ index === curIndex ? time.timeStrList[index].slice(-11) : (`${item === time.now ? '当前 ' : ''}${time.timeStrList[index].slice(-5)}`) }}</span>
               <li
                 class="tl-datetime-item"
                 :class="{
                   'tl-datetime-item-now': item === time.now,
-                  'tl-datetime-item-current': index === current,
+                  'tl-datetime-item-current': index === curIndex,
                   'tl-datetime-item-disable': !pause,
                 }"
                 :style="{ width: itemWidth + 'px' }"
@@ -94,9 +95,9 @@
       <i class="tl-icon-setting"></i>
       <transition name="fade-in-linear">
         <div v-show="showMenuDetail" class="tl-menu-list">
-          <div class="tl-menu-item">图层管理</div>
-          <div v-if="datePicker" class="tl-menu-item">时间选择</div>
-          <div v-if="speedSetting" class="tl-menu-item">倍速播放</div>
+          <div class="tl-menu-item" @click="onClickLayerManager">图层管理</div>
+          <div v-if="datePicker" class="tl-menu-item" @click="onClickDatetimePicker">时间选择</div>
+          <div v-if="speedSetting" class="tl-menu-item" @click="onClickSpeedSetting">倍速播放</div>
         </div>
       </transition>
     </div>
@@ -116,20 +117,22 @@
   // TODO 多层 space；e.g: space = [6、12、30], now = 201701172224；最后剩36分钟但是 space = 30，相除等于1.2
   // TODO range 支持小数，e.g: [1.5, 13.5]
   // TODO 时间字符串的精度可配置
+  // TODO 长度自适应改变
+  // TODO 移动端优化
+  // TODO space 支持年/月/日/时
   import BScroll from 'better-scroll';
   import debounce from 'throttle-debounce/debounce';
   import { handle } from './utils/handle';
-  import Velocity from 'velocity-animate';
   import TlSlider from './lib/slider/slider.vue';
   import TlTooltip from './lib/tooltip';
-  import { SPEED_DURATION } from './utils/config';
+  import { SPEED_DURATION, PADDING_WIDTH } from './utils/config';
 
   const MENU_BTN_WIDTH = 40;
   const COLLAPSE_BTN_WIDTH = 20;
   const CONTROL_BTN_WIDTH = 96;
   const HOUR_WIDTH = 72;
-  const PADDING_WIDTH = 20;
   const COLLAPSE_WIDTH = 108;
+  const DEBOUNCE_TIME = 1000;
 
   export default {
     name: 'Timeline',
@@ -199,14 +202,16 @@
     },
     data () {
       return {
-        time: {},
+        time: {}, // 处理之后的时间数据对象
         collapse: false, // 时间轴是否正处于折叠状态
         timer: null, // 时间轴播放的定时器
-        visibleWidth: 0, // 时间轴有刻度的区域的宽度
-        timelineWidth: 0, // 整个时间轴容器的宽度
-        current: -1, // 当前时间的索引值
+        visibleWidth: null, // 时间轴有刻度的区域的宽度
+        timelineWidth: null, // 整个时间轴容器的宽度
+        current: 0, // 当前时间的毫秒数
+        curIndex: -2, // 当前时间的索引值
         minIndex: null, // 播放区间最小值的索引
         maxIndex: null, // 播放区间最大值的索引
+        scrollX: 0, // 时间轴沿横轴方向滚动的距离的绝对值
         scrollHandler: null, // scroll 实例的句柄
         showMenuDetail: false // 是否显示 menu 菜单详情
       };
@@ -232,21 +237,36 @@
         return width;
       },
       // 时间轴刻度区域的宽度
-      datetimeContainerStyle () {
+      datetimeWidthStyle () {
         return {
           width: `${this.visibleWidth}px`
         };
+      },
+      timelineWidthStyle () {
+        return {
+          width: `${this.collapse ? COLLAPSE_WIDTH : this.timelineWidth}px`
+        };
+      },
+      // 可视区间内的最小索引值
+      visibleMinIndex () {
+        let index = Math.floor((this.scrollX - PADDING_WIDTH / 2) / this.itemWidth);
+        return index >= this.minIndex ? index : this.minIndex;
+      },
+      // 可视区间内的最大索引值
+      visibleMaxIndex () {
+        let index = Math.floor((this.visibleWidth + this.scrollX - PADDING_WIDTH / 2) / this.itemWidth);
+        return index <= this.maxIndex ? index : this.maxIndex;
       }
     },
     watch: {
       now () {
-        this.init();
+        this.reinit();
       },
       range () {
-        this.init();
+        this.reinit();
       },
       space () {
-        this.init();
+        this.reinit();
       },
       pause (n) {
         if (n) {
@@ -256,7 +276,7 @@
         }
       },
       current (n) {
-        this.$emit('current', this.time.timeList[n]);
+        this.$emit('current', this.current);
       },
       minIndex (n, o) {
         if (n >= this.maxIndex) {
@@ -265,9 +285,9 @@
           this.minIndex = this.time.firstPlaceholderIndex;
         }
 
-        debounce(1000, () => {
-          if (this.current < this.minIndex) {
-            this.current = this.minIndex;
+        debounce(DEBOUNCE_TIME, () => {
+          if (this.curIndex < this.minIndex) {
+            this.setCurIndex(this.minIndex, false);
           }
           this.$emit('minimum', this.minIndex);
         })();
@@ -279,26 +299,12 @@
           this.maxIndex = this.minIndex + 1;
         }
 
-        debounce(1000, () => {
-          if (this.current > this.maxIndex) {
-            this.current = this.maxIndex - 1;
+        debounce(DEBOUNCE_TIME, () => {
+          if (this.curIndex > this.maxIndex) {
+            this.setCurIndex(this.maxIndex - 1, false);
           }
           this.$emit('maximum', this.maxIndex);
         })();
-      },
-      collapse (n, o) {
-        // 时间轴收起时过渡动画
-        let width = 0;
-        if (n) {
-          width = `${COLLAPSE_WIDTH}px`;
-        } else {
-          width = `${this.timelineWidth}px`;
-        }
-        Velocity(
-          this.$refs.timeline,
-          { width },
-          { duration: SPEED_DURATION }
-        );
       }
     },
     created () {
@@ -312,48 +318,67 @@
       this.visibleWidth = this.timelineWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
       this.$nextTick(() => {
         this.initScroll();
-        this.setNowLabelPosition();
+        this.scrollTo(this.curIndex);
       });
     },
     methods: {
-      init () {
+      init (scroll) {
         this.time = handle(this.now, this.range, this.space);
         this.minIndex = this.time.firstPlaceholderIndex;
         this.maxIndex = this.time.lastPlaceholderIndex;
+        this.setCurIndex(this.curIndex, scroll);
         this.$emit('time', this.time);
-        console.log('this.time', this.time);
+      },
+      reinit () {
+        let scroll = true;
+        if (!this.pause) {
+          this.$emit('update:pause', true);
+        }
+        this.curIndex = -2;
+        this.init(scroll);
       },
       initScroll () {
-        this.scrollHandler = new BScroll(this.$refs.container, { scrollX: true });
-      },
-      setNowLabelPosition () {
-        let nowIndex = this.time.timeList.findIndex(a => {
-          return a === this.time.now;
+        this.scrollHandler = new BScroll(this.$refs.datetime, {
+          probeType: 3, // 当 probeType 为 3 的时候，不仅在屏幕滑动的过程中，而且在 momentum 滚动动画运行过程中实时派发 scroll 事件
+          scrollX: true // 在时间轴初始化时指定滚动方向为横轴
         });
-        if (nowIndex > -1) {
-          this.current = nowIndex;
-        } else {
-          this.current = this.time.timeList.length - 1;
+        this.scrollHandler.on('scroll', pos => {
+          this.scrollX = Math.abs(pos.x);
+        });
+      },
+      // 设置 index 的值，同时设置 current 的值为 index 在 time list 中对应的值
+      // scroll 为布尔值，值为 true 时支持滚动，值为 false 时不支持滚动
+      setCurIndex (index, scroll) {
+        // 初始化的时候设置 index 的值为和 now 的索引相同
+        // 当 range 是历史的时候 now 的索引可能会越界，当越界时使 index 为 time list 的最后一个索引
+        if (index === -2) {
+          index = this.time.timeList.findIndex(a => {
+            return a === this.time.now;
+          });
         }
-        this.scrollTo(this.current);
+
+        if (index > -1) {
+          this.curIndex = index;
+        } else {
+          this.curIndex = this.time.timeList.length - 1;
+        }
+        this.current = this.time.timeList[this.curIndex];
+        scroll && this.scrollTo(this.curIndex);
       },
       doPause () {
-        console.log('暂停播放', this.pause);
         clearTimeout(this.timer);
-        this.timer = null;
       },
       doPlay () {
-        console.log('开始播放', this.pause);
-        this.current++;
-        if (this.current === this.maxIndex) {
+        this.curIndex++;
+        if (this.curIndex === this.maxIndex) {
           if (this.loop) {
-            this.current = this.minIndex;
+            this.curIndex = this.minIndex;
           } else {
-            this.current = this.maxIndex - 1;
-            this.onClickPlay();
+            this.curIndex = this.maxIndex - 1;
+            this.$emit('update:pause', true);
           }
         }
-        this.scrollTo(this.current);
+        this.setCurIndex(this.curIndex, true);
         this.timer = setTimeout(() => {
           this.doPlay();
         }, SPEED_DURATION);
@@ -364,13 +389,11 @@
       },
       onClickFirst () {
         if (!this.pause) { return; }
-        this.current = this.minIndex;
-        this.scrollTo(this.current);
+        this.setCurIndex(this.minIndex, true);
       },
       onClickLast () {
         if (!this.pause) { return; }
-        this.current = this.maxIndex - 1;
-        this.scrollTo(this.current);
+        this.setCurIndex(this.maxIndex - 1, true);
       },
       onClickPlay () {
         if (!this.supportPlay) { return; }
@@ -378,42 +401,45 @@
       },
       onClickItem (index) {
         if (!this.pause) { return; }
-        this.current = index;
+        this.setCurIndex(index, false);
       },
       scrollTo (index) {
-        if (index < 0 || index >= this.time.timeList.length) { return; }
-        // 计算可视区域内的最小 index 和最大 index
-        let scrollXMatrix = document.defaultView.getComputedStyle(this.$refs.datetime, null).transform.replace(/[^0-9\-.,]/g, '').split(',');
-        let scrollX = Math.abs(+(scrollXMatrix[12] || scrollXMatrix[4]));
+        if (index < 0 || index >= this.time.timeList.length || !this.$refs.list) { return; }
 
-        let visibleMinIndex = scrollX ? (scrollX - PADDING_WIDTH / 2) / this.itemWidth : 0;
-        let visibleMaxIndex = (this.visibleWidth + scrollX - PADDING_WIDTH / 2) / this.itemWidth;
-
-        let xOffset;
-        let xMaxOffset;
-        let xExpectedOffset = this.visibleWidth / 2 - (this.itemWidth * index + PADDING_WIDTH / 2);
-        if (index > visibleMaxIndex) {
-          xMaxOffset = this.visibleWidth - (this.$refs.list.clientWidth + PADDING_WIDTH);
-          xOffset = xExpectedOffset < xMaxOffset ? xMaxOffset : xExpectedOffset;
-        } else if (index < visibleMinIndex) {
-          xMaxOffset = 0;
-          xOffset = xExpectedOffset > xMaxOffset ? xMaxOffset : xExpectedOffset;
+        let offsetX;
+        let maxOffsetX;
+        let expectedOffsetX = this.visibleWidth / 2 - (this.itemWidth * index + PADDING_WIDTH / 2);
+        if (index > this.visibleMaxIndex) {
+          maxOffsetX = this.visibleWidth - (this.$refs.list.clientWidth + PADDING_WIDTH);
+          offsetX = expectedOffsetX < maxOffsetX ? maxOffsetX : expectedOffsetX;
+        } else if (index < this.visibleMinIndex) {
+          maxOffsetX = 0;
+          offsetX = expectedOffsetX > maxOffsetX ? maxOffsetX : expectedOffsetX;
         } else {
           return;
         }
 
-        this.scrollHandler.scrollTo(xOffset, 0, SPEED_DURATION);
+        this.scrollHandler.scrollTo(offsetX, 0, SPEED_DURATION);
+      },
+      onClickLayerManager () {
+        this.$emit('layer-manager');
+      },
+      onClickSpeedSetting () {
+        console.log('onClickSpeedSetting 倍速播放');
+      },
+      onClickDatetimePicker () {
+        console.log('onClickDatetimePicker 时间选择');
       }
     },
-    destroy () {
+    // 在 beforeDestroy 里，实例仍然完全可用，destroyed 里实例不可用
+    beforeDestroy () {
       clearTimeout(this.timer);
-      this.timer = null;
     }
   };
 </script>
 
 <style lang="stylus">
-  // 全局的 tooltip 样式
+  /* 全局的 tooltip 样式 */
   @import './css/tooltip';
 </style>
 

@@ -8,7 +8,7 @@
       <span slot="content">{{ formatValue }}</span>
       <img
         class="tl-button"
-        :class="{ 'hover': hovering, 'dragging': dragging, 'disabled': !suspend || freeze }"
+        :class="{ 'hover': hovering, 'dragging': dragging, 'disabled': !pause || freeze }"
         src="../../images/indicator.png"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
@@ -21,6 +21,8 @@
 
 <script>
   import TlTooltip from '../tooltip';
+  import { PADDING_WIDTH } from '../../utils/config';
+
   export default {
     name: 'TlSlider',
 
@@ -53,8 +55,8 @@
     },
 
     computed: {
-      suspend () {
-        return this.$parent.suspend;
+      pause () {
+        return this.$parent.pause;
       },
 
       showTooltip () {
@@ -66,7 +68,7 @@
       },
 
       currentPosition () {
-        return this.$parent.itemWidth * this.value + 10;
+        return this.$parent.itemWidth * this.value + PADDING_WIDTH / 2;
       },
 
       formatValue () {
@@ -77,7 +79,7 @@
         if (this.place === 'first') {
           return { width: `${this.currentPosition}px` };
         } else {
-          return { width: `${(this.$parent.time.timeList.length - this.value) * this.$parent.itemWidth + 10}px` };
+          return { width: `${(this.$parent.time.timeList.length - this.value) * this.$parent.itemWidth + PADDING_WIDTH / 2}px` };
         }
       },
       buttonPlace () {
@@ -111,7 +113,7 @@
       },
 
       onButtonDown (event) {
-        if (!this.suspend || this.freeze) { return; }
+        if (!this.pause || this.freeze) { return; }
         event.preventDefault();
         this.onDragStart(event);
         window.addEventListener('mousemove', this.onDragging);

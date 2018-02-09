@@ -3,7 +3,7 @@
     <button type="button" @click="range = [-12, 24]">range = [-12, 24]</button>
     <button type="button" @click="space = 20">space = 20</button>
     <button type="button" @click="now = new Date().getTime() + 86400000">一天以后</button>
-    <button type="button" @click="pause = !pause"> 播放 ：{{ !pause }} </button>
+    <button type="button" @click="handlePause"> 播放 ：{{ !pause }} </button>
     <div class="current-time">{{ currentTime }}</div>
     <timeline
       class="timeline-wrapper"
@@ -42,6 +42,10 @@
       };
     },
     methods: {
+      handlePause () {
+        this.pause = !this.pause;
+        console.log(this);
+      },
       handleCurrentTime (item) {
         this.currentTime = moment(item).format('YYYY-MM-DD HH:mm');
       },

@@ -10,6 +10,7 @@ $collapse-speed = .4s
   height: $height-all
   color: $color-font
   background-color: $color-background
+  transition: width $collapse-speed
   &.timeline-light
     background-color: $color-background-l
   &.timeline-collapse
@@ -86,7 +87,7 @@ $collapse-speed = .4s
           width: 48px
         &.tl-last
           padding-right: 8px
-    .tl-datetime-container
+    .tl-datetime-main
       height: $height-all
       overflow: hidden
       .tl-datetime
