@@ -16,8 +16,7 @@
     "better-scroll": "^1.6.3",
     "moment": "^2.20.1",
     "throttle-debounce": "^1.0.1",
-    "vue": "^2.5.2",
-    "vuejs-tooltip": "^0.1.0"
+    "vue": "^2.5.2"
   },
   "devDependencies": {
     "autoprefixer": "^7.1.2",

@@ -59,10 +59,10 @@ methods: {
     console.log(moment(item).format('YYYY-MM-DD HH:mm'));
   },
   handleMinIndex (index) {
-    console.log('App.vue: handleFirstTime', index);
+    console.log('App.vue: handleMinIndex', index);
   },
   handleMaxIndex (index) {
-    console.log('App.vue: handleLastTime', index);
+    console.log('App.vue: handleMaxIndex', index);
   },
   handleTimeObj (list) {
     console.log('App.vue: handleTimeObj', list);
