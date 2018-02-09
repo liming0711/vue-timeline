@@ -117,7 +117,6 @@
   // TODO 多层 space；e.g: space = [6、12、30], now = 201701172224；最后剩36分钟但是 space = 30，相除等于1.2
   // TODO range 支持小数，e.g: [1.5, 13.5]
   // TODO 时间字符串的精度可配置
-  // TODO 长度自适应改变
   // TODO 移动端优化
   // TODO space 支持年/月/日/时
   import BScroll from 'better-scroll';
@@ -205,6 +204,7 @@
         time: {}, // 处理之后的时间数据对象
         collapse: false, // 时间轴是否正处于折叠状态
         timer: null, // 时间轴播放的定时器
+        resizeTimer: null,
         visibleWidth: null, // 时间轴有刻度的区域的宽度
         timelineWidth: null, // 整个时间轴容器的宽度
         current: 0, // 当前时间的毫秒数
@@ -287,7 +287,7 @@
 
         debounce(DEBOUNCE_TIME, () => {
           if (this.curIndex < this.minIndex) {
-            this.setCurIndex(this.minIndex, false);
+            this.setCurIndex(this.minIndex);
           }
           this.$emit('minimum', this.minIndex);
         })();
@@ -301,7 +301,7 @@
 
         debounce(DEBOUNCE_TIME, () => {
           if (this.curIndex > this.maxIndex) {
-            this.setCurIndex(this.maxIndex - 1, false);
+            this.setCurIndex(this.maxIndex - 1);
           }
           this.$emit('maximum', this.maxIndex);
         })();
@@ -314,28 +314,18 @@
       this.init();
     },
     mounted () {
-      this.timelineWidth = this.$refs.timeline.offsetWidth;
-      this.visibleWidth = this.timelineWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
+      this.calculateWidth();
       this.$nextTick(() => {
         this.initScroll();
-        this.scrollTo(this.curIndex);
+        this.setCurIndex(this.curIndex);
       });
     },
     methods: {
-      init (scroll) {
+      init () {
         this.time = handle(this.now, this.range, this.space);
         this.minIndex = this.time.firstPlaceholderIndex;
         this.maxIndex = this.time.lastPlaceholderIndex;
-        this.setCurIndex(this.curIndex, scroll);
         this.$emit('time', this.time);
-      },
-      reinit () {
-        let scroll = true;
-        if (!this.pause) {
-          this.$emit('update:pause', true);
-        }
-        this.curIndex = -2;
-        this.init(scroll);
       },
       initScroll () {
         this.scrollHandler = new BScroll(this.$refs.datetime, {
@@ -346,9 +336,32 @@
           this.scrollX = Math.abs(pos.x);
         });
       },
+      reinit () {
+        if (!this.pause) {
+          this.$emit('update:pause', true);
+        }
+        this.curIndex = -2;
+        this.init();
+        this.setCurIndex(this.curIndex);
+      },
+      resize () {
+        // 因为宽度改变有动画，需要等到动画播放完成，否则 this.$refs.timeline.offsetWidth 无法获得准确值
+        this.resizeTimer = setTimeout(() => {
+          if (this.$refs.timeline.offsetWidth !== this.timelineWidth) {
+            this.calculateWidth();
+            this.$nextTick(() => {
+              this.scrollHandler.refresh();
+            });
+          }
+        }, SPEED_DURATION);
+      },
+      calculateWidth () {
+        this.timelineWidth = this.$refs.timeline.offsetWidth;
+        this.visibleWidth = this.timelineWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
+      },
       // 设置 index 的值，同时设置 current 的值为 index 在 time list 中对应的值
       // scroll 为布尔值，值为 true 时支持滚动，值为 false 时不支持滚动
-      setCurIndex (index, scroll) {
+      setCurIndex (index) {
         // 初始化的时候设置 index 的值为和 now 的索引相同
         // 当 range 是历史的时候 now 的索引可能会越界，当越界时使 index 为 time list 的最后一个索引
         if (index === -2) {
@@ -363,7 +376,7 @@
           this.curIndex = this.time.timeList.length - 1;
         }
         this.current = this.time.timeList[this.curIndex];
-        scroll && this.scrollTo(this.curIndex);
+        this.scrollTo(this.curIndex);
       },
       doPause () {
         clearTimeout(this.timer);
@@ -378,7 +391,7 @@
             this.$emit('update:pause', true);
           }
         }
-        this.setCurIndex(this.curIndex, true);
+        this.setCurIndex(this.curIndex);
         this.timer = setTimeout(() => {
           this.doPlay();
         }, SPEED_DURATION);
@@ -389,11 +402,11 @@
       },
       onClickFirst () {
         if (!this.pause) { return; }
-        this.setCurIndex(this.minIndex, true);
+        this.setCurIndex(this.minIndex);
       },
       onClickLast () {
         if (!this.pause) { return; }
-        this.setCurIndex(this.maxIndex - 1, true);
+        this.setCurIndex(this.maxIndex - 1);
       },
       onClickPlay () {
         if (!this.supportPlay) { return; }
@@ -401,10 +414,13 @@
       },
       onClickItem (index) {
         if (!this.pause) { return; }
-        this.setCurIndex(index, false);
+        this.setCurIndex(index);
       },
       scrollTo (index) {
+        // index 值越界或者 dom 没有渲染完毕的时候，直接返回
         if (index < 0 || index >= this.time.timeList.length || !this.$refs.list) { return; }
+        // index 值有效但是不符合条件时，直接返回
+        if (index >= this.visibleMinIndex && index <= this.visibleMaxIndex) { return; }
 
         let offsetX;
         let maxOffsetX;
@@ -415,8 +431,6 @@
         } else if (index < this.visibleMinIndex) {
           maxOffsetX = 0;
           offsetX = expectedOffsetX > maxOffsetX ? maxOffsetX : expectedOffsetX;
-        } else {
-          return;
         }
 
         this.scrollHandler.scrollTo(offsetX, 0, SPEED_DURATION);
@@ -434,6 +448,7 @@
     // 在 beforeDestroy 里，实例仍然完全可用，destroyed 里实例不可用
     beforeDestroy () {
       clearTimeout(this.timer);
+      clearTimeout(this.resizeTimer);
     }
   };
 </script>

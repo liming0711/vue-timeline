@@ -3,9 +3,11 @@
     <button type="button" @click="range = [-12, 24]">range = [-12, 24]</button>
     <button type="button" @click="space = 20">space = 20</button>
     <button type="button" @click="now = new Date().getTime() + 86400000">一天以后</button>
+    <button type="button" @click="handleResize">重新渲染宽度</button>
     <button type="button" @click="handlePause"> 播放 ：{{ !pause }} </button>
-    <div class="current-time">{{ currentTime }}</div>
+    <div class="current-time">{{ formatCurTime }}</div>
     <timeline
+      ref="timeline"
       class="timeline-wrapper"
       :now="now"
       :range="range"
@@ -34,20 +36,20 @@
     },
     data () {
       return {
+        // 15:44, 20, [-24, 0] 有 bug
         now: new Date().getTime(),
         range: [-24, 0],
-        space: 6,
+        space: 20,
         pause: true,
-        currentTime: 0
+        formatCurTime: 0
       };
     },
     methods: {
       handlePause () {
         this.pause = !this.pause;
-        console.log(this);
       },
       handleCurrentTime (item) {
-        this.currentTime = moment(item).format('YYYY-MM-DD HH:mm');
+        this.formatCurTime = moment(item).format('YYYY-MM-DD HH:mm');
       },
       handleMinIndex (index) {
         console.log('App.vue: handleMinIndex', index);
@@ -57,6 +59,12 @@
       },
       handleTimeObj (list) {
         console.log('App.vue: handleTimeObj', list);
+      },
+      // 想要让时间轴重新渲染宽度，需要显示的改变时间轴的宽度
+      handleResize () {
+        let width = this.$refs.timeline.$el.offsetWidth + 20;
+        this.$refs.timeline.$el.style.width = `${width}px`;
+        this.$refs.timeline.resize();
       }
     }
   };
