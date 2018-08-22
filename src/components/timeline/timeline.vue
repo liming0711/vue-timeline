@@ -64,12 +64,13 @@
                 <span
                   v-if="new Date(item).getHours() !== new Date(time.timeList[index - 1]).getHours()"
                   class="tl-datetime-hour"
+                  :data-timestamp="item"
                   :data-hour="new Date(item).getHours()"></span>
                 <!-- tl-datetime-hour-last 这个 span 是为了补最后一个小时数字的显示 -->
                 <span
                   v-if="index === time.timeList.length - 1"
                   class="tl-datetime-hour tl-datetime-hour-last"
-                  :data-hour="new Date(item + 60 * 60 * 1000).getHours()"></span>
+                  :data-hour="new Date(item + space * 60 * 1000).getHours()"></span>
                 <!-- 显示的日期 -->
                 <span
                   v-if="new Date(item).getDate() !== new Date(time.timeList[index - 1]).getDate()"
@@ -321,12 +322,14 @@
       });
     },
     methods: {
+      // 初始化时间轴
       init () {
         this.time = handle(this.now, this.range, this.space);
         this.minIndex = this.time.firstPlaceholderIndex;
         this.maxIndex = this.time.lastPlaceholderIndex;
         this.$emit('time', this.time);
       },
+      // 初始化 better-scroll 并为x轴的滚动距离添加监听
       initScroll () {
         this.scrollHandler = new BScroll(this.$refs.datetime, {
           probeType: 3, // 当 probeType 为 3 的时候，不仅在屏幕滑动的过程中，而且在 momentum 滚动动画运行过程中实时派发 scroll 事件
@@ -336,14 +339,18 @@
           this.scrollX = Math.abs(pos.x);
         });
       },
+      // 改变 now、space 或 range 时需要重新初始化时间轴
       reinit () {
+        // 重新初始化时间轴时，如果时间轴正在播放则使其暂停
         if (!this.pause) {
           this.$emit('update:pause', true);
         }
+
         this.curIndex = -2;
         this.init();
         this.setCurIndex(this.curIndex);
       },
+      // 重新计算时间轴的宽度并刷新 better-scroll
       resize () {
         // 因为宽度改变有动画，需要等到动画播放完成，否则 this.$refs.timeline.offsetWidth 无法获得准确值
         this.resizeTimer = setTimeout(() => {
@@ -356,7 +363,9 @@
         }, SPEED_DURATION);
       },
       calculateWidth () {
+        // 计算整个时间轴的宽度
         this.timelineWidth = this.$refs.timeline.offsetWidth;
+        // 计算时间轴刻度区域可视部分的宽度
         this.visibleWidth = this.timelineWidth - MENU_BTN_WIDTH - (this.showCollapse ? COLLAPSE_BTN_WIDTH : 0) - CONTROL_BTN_WIDTH;
       },
       // 设置 index 的值，同时设置 current 的值为 index 在 time list 中对应的值
@@ -383,6 +392,7 @@
       },
       doPlay () {
         this.curIndex++;
+        // 处理 curIndex 的边界值
         if (this.curIndex === this.maxIndex) {
           if (this.loop) {
             this.curIndex = this.minIndex;
@@ -391,6 +401,7 @@
             this.$emit('update:pause', true);
           }
         }
+
         this.setCurIndex(this.curIndex);
         this.timer = setTimeout(() => {
           this.doPlay();
@@ -422,9 +433,9 @@
         // index 值有效但是不符合条件时，直接返回
         if (index >= this.visibleMinIndex && index <= this.visibleMaxIndex) { return; }
 
-        let offsetX;
-        let maxOffsetX;
-        let expectedOffsetX = this.visibleWidth / 2 - (this.itemWidth * index + PADDING_WIDTH / 2);
+        let offsetX; // 时间轴的实际移动距离
+        let maxOffsetX; // 时间轴的最大可移动距离
+        let expectedOffsetX = this.visibleWidth / 2 - (this.itemWidth * index + PADDING_WIDTH / 2); // 本次操作时间轴的期望移动距离
         if (index > this.visibleMaxIndex) {
           maxOffsetX = this.visibleWidth - (this.$refs.list.clientWidth + PADDING_WIDTH);
           offsetX = expectedOffsetX < maxOffsetX ? maxOffsetX : expectedOffsetX;
@@ -446,6 +457,7 @@
       }
     },
     // 在 beforeDestroy 里，实例仍然完全可用，destroyed 里实例不可用
+    // 故在 beforeDestroy 里销毁定时器
     beforeDestroy () {
       clearTimeout(this.timer);
       clearTimeout(this.resizeTimer);

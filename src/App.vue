@@ -38,8 +38,8 @@
       return {
         // 15:44, 20, [-24, 0] 有 bug
         now: new Date().getTime(),
-        range: [-24, 0],
-        space: 20,
+        range: [0, 2],
+        space: 1,
         pause: true,
         formatCurTime: 0
       };
@@ -60,7 +60,8 @@
       handleTimeObj (list) {
         console.log('App.vue: handleTimeObj', list);
       },
-      // 想要让时间轴重新渲染宽度，需要显示的改变时间轴的宽度
+      // 想要让时间轴重新渲染宽度，需要改变时间轴的宽度
+      // 然后调用时间轴的 resize 方法
       handleResize () {
         let width = this.$refs.timeline.$el.offsetWidth + 20;
         this.$refs.timeline.$el.style.width = `${width}px`;
